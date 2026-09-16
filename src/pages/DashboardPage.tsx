@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { errorMessage as message, useLayout } from "../components/layoutContext";
 import { Icon } from "../components/Icon";
+import { LazySatelliteMap } from "../components/LazySatelliteMap";
 import { ConfirmDialog, Modal } from "../components/Modal";
 import { formatDate, formatTimeRange } from "../lib/time";
 import * as api from "../features/activity-logs/api";
@@ -24,7 +25,12 @@ const SORT_OPTIONS: { label: string; key: SortKey; descending: boolean }[] = [
 ];
 
 export function DashboardPage() {
-  const { data, notify } = useLayout();
+  const { data, notify, session } = useLayout();
+  // `?liveMap` previews the real-account map in a demo session (dev only).
+  const liveMap =
+    !session.user.is_anonymous ||
+    (import.meta.env.DEV &&
+      new URLSearchParams(window.location.search).has("liveMap"));
   const { profile, logs, setLogs, stats, loading, error, refresh } = data;
   const timeZone = profile?.organization.timezone ?? "America/Chicago";
 
@@ -500,6 +506,7 @@ export function DashboardPage() {
                               <LogDetails
                                 key={log.id}
                                 log={log}
+                                liveMap={liveMap}
                                 tagMenuOpen={menu === "tag"}
                                 onToggleTagMenu={() =>
                                   setMenu(menu === "tag" ? null : "tag")
@@ -550,10 +557,22 @@ export function DashboardPage() {
           onClose={() => setMapLog(null)}
           className="map-modal"
         >
-          <img
-            src="/reference/field-map.png"
-            alt={`Expanded satellite map of ${mapLog.fieldName}`}
-          />
+          {liveMap && mapLog.latitude !== null && mapLog.longitude !== null ? (
+            <LazySatelliteMap
+              className="modal-map"
+              center={{
+                latitude: mapLog.latitude,
+                longitude: mapLog.longitude,
+              }}
+              zoom={16}
+              label={`Expanded satellite map of ${mapLog.fieldName}`}
+            />
+          ) : (
+            <img
+              src="/reference/field-map.png"
+              alt={`Expanded satellite map of ${mapLog.fieldName}`}
+            />
+          )}
           {mapLog.latitude !== null && mapLog.longitude !== null && (
             <p className="map-caption">
               Recorded at {mapLog.latitude.toFixed(4)},{" "}
@@ -570,6 +589,7 @@ export function DashboardPage() {
           employees={data.employees}
           fields={data.fields}
           timeZone={timeZone}
+          liveMap={liveMap}
           defaultDate={stats?.asOf ?? new Date().toISOString().slice(0, 10)}
           onSave={saveLog}
           onDelete={

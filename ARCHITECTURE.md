@@ -122,6 +122,16 @@ The files are about 70–210 KB, so decoding them in the browser is cheap. With 
 
 Logs without audio (for example, ones created in the dashboard) keep the design's static waveform, and Play reads the transcript with browser speech synthesis.
 
+## Maps
+
+Demo sessions show the design's map image, matching the Figma. Email accounts get a live satellite map in the expanded row and the map dialog, and the log form includes a location picker. Users can click the map, use the field's location, or use the browser's current location. A new log follows its field's location until the user picks a spot, and a picked spot stays put when the field changes.
+
+- **Leaflet, not MapLibre or Google Maps.** The map needs one raster satellite layer, a pin, and click-to-pick. Leaflet does that in about 45 KB gzipped; MapLibre is several times larger and built for vector styling that isn't used here. Google Maps needs billing and an API key.
+- **Esri World Imagery tiles.** Free satellite imagery with no key to manage or leak, with the required attribution shown. For production, the tile URL would switch to a keyed provider (Esri or MapTiler).
+- **Loaded on demand.** `LazySatelliteMap` imports Leaflet with `React.lazy`, so demo visitors never download it.
+- **Stacking contained.** `isolation: isolate` keeps Leaflet's high z-index panes below menus and dialogs.
+- **Farmland coordinates.** The demo fields sit on four real quarter-section crop fields in eastern Nebraska, so live maps show farmland rather than a town.
+
 ## UI decisions
 
 - The supplied screenshots are the visual source of truth, tuned for a 1440px desktop viewport, with narrower layouts down to phone width.
@@ -140,6 +150,5 @@ Logs without audio (for example, ones created in the dashboard) keep the design'
 ## Next steps
 
 - End-to-end Playwright test covering login, editing, and persistence after refresh
-- Live satellite map with the recorded GPS point
 - Audio upload from the dashboard, with peaks computed at upload time
 - Server-side pagination for large farms

@@ -47,10 +47,16 @@ export type LogInput = {
   applicationRate: number | null;
   rateUnit: string | null;
   transcript: string | null;
+  latitude: number | null;
+  longitude: number | null;
   reviewed: boolean;
 };
 
 export type Option = { id: string; name: string };
+export type FieldOption = Option & {
+  latitude: number | null;
+  longitude: number | null;
+};
 
 export type DashboardStats = {
   asOf: string;
@@ -133,11 +139,14 @@ export async function fetchOptions() {
       .select("id, full_name")
       .eq("is_active", true)
       .order("full_name"),
-    supabase.from("fields").select("id, name").order("name"),
+    supabase
+      .from("fields")
+      .select("id, name, latitude, longitude")
+      .order("name"),
   ]);
   return {
     employees: unwrap(employees).map((e) => ({ id: e.id, name: e.full_name })),
-    fields: unwrap(fields),
+    fields: unwrap(fields) as FieldOption[],
   };
 }
 
@@ -152,6 +161,8 @@ function toRow(input: LogInput) {
     application_rate: input.applicationRate,
     rate_unit: input.rateUnit,
     transcript: input.transcript,
+    latitude: input.latitude,
+    longitude: input.longitude,
   };
 }
 

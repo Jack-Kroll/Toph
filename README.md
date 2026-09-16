@@ -12,6 +12,7 @@ Full-stack implementation of the Toph farm activity dashboard from the Fall 2026
 - Metrics (Todays Recordings, New, Active Workers, Response Accuracy) calculated in Postgres
 - "New Employee Logs" inbox: unreviewed logs for the current month, with search, sort, activity filter, and a toggle to include reviewed logs
 - Expandable rows with real recordings (private Storage, signed URLs), a waveform drawn from the audio with click-to-seek, tags, transcript, product and rate applied, and a field map
+- Live satellite maps for signed-up accounts, plus a location picker in the log form (click the map, use the field's location, or use your current location); the demo keeps the design's map image
 - Create, edit, and delete logs; bulk mark reviewed, mark new, and delete from the row checkboxes
 - Tags saved per farm and reused across logs
 - Private demo per browser (Supabase anonymous sign-in), plus email/password accounts; each gets its own farm
@@ -85,6 +86,6 @@ public/reference/                  Avatar and map images from the design
 ## Known limitations
 
 - Demo recordings are generated with macOS text-to-speech (`scripts/generate-demo-audio.py`), not real field recordings. Logs created in the dashboard have no audio, so **Play Recording** reads their transcript aloud instead.
-- The field map is the design's satellite image with the recorded coordinates listed underneath, not a live map.
+- Demo sessions show the design's map image; the live map (Esri World Imagery, no API key) appears for email accounts. Esri's terms allow this for development and demos; production use would need an Esri or MapTiler plan. To preview the live map in a local demo session, add `?liveMap` to the URL (development builds only).
 - Demo farms treat April 22, 2026 as "today" so the seeded numbers match the design. Farms without `demo_as_of` use the real date in their time zone.
 - Sidebar sections other than Dashboard are placeholders that show an "under construction" page.

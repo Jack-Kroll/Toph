@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, FormEvent, MouseEvent } from "react";
 import { Icon } from "../../components/Icon";
+import { LazySatelliteMap } from "../../components/LazySatelliteMap";
 import type { ActivityLog } from "./api";
 import { BAR_COUNT, useRecording } from "./useRecording";
 
@@ -23,6 +24,8 @@ function formatNumber(value: number) {
 
 type Props = {
   log: ActivityLog;
+  /** Real accounts get a satellite map; the demo shows the design's image. */
+  liveMap: boolean;
   tagMenuOpen: boolean;
   onToggleTagMenu: () => void;
   onAddTag: (name: string) => Promise<void>;
@@ -33,6 +36,7 @@ type Props = {
 
 export function LogDetails({
   log,
+  liveMap,
   tagMenuOpen,
   onToggleTagMenu,
   onAddTag,
@@ -261,17 +265,33 @@ export function LogDetails({
         </p>
       </div>
       <div className="map-details">
-        <button
-          className="map-image-button"
-          onClick={onOpenMap}
-          aria-label={`Expand map of ${log.fieldName}`}
-        >
-          <img
-            className="field-map"
-            src="/reference/field-map.png"
-            alt={`Satellite view of ${log.fieldName} with the recorded work location`}
+        {!liveMap ? (
+          <button
+            className="map-image-button"
+            onClick={onOpenMap}
+            aria-label={`Expand map of ${log.fieldName}`}
+          >
+            <img
+              className="field-map"
+              src="/reference/field-map.png"
+              alt={`Satellite view of ${log.fieldName} with the recorded work location`}
+            />
+          </button>
+        ) : log.latitude !== null && log.longitude !== null ? (
+          <LazySatelliteMap
+            className="map-image-button"
+            center={{ latitude: log.latitude, longitude: log.longitude }}
+            zoom={15}
+            label={`Satellite map of ${log.fieldName} with the recorded work location`}
           />
-        </button>
+        ) : (
+          <div className="map-image-button map-empty">
+            No location recorded.
+            <button className="text-button" onClick={onEdit}>
+              Add a location
+            </button>
+          </div>
+        )}
         <button className="wide-button" onClick={onOpenMap}>
           <Icon name="expand" size={15} />
           Expand Map

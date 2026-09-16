@@ -6,6 +6,7 @@ import {
   fetchStats,
   type ActivityLog,
   type DashboardStats,
+  type FieldOption,
   type Option,
 } from "../features/activity-logs/api";
 
@@ -45,7 +46,7 @@ export function useDashboardData(userId: string) {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [employees, setEmployees] = useState<Option[]>([]);
-  const [fields, setFields] = useState<Option[]>([]);
+  const [fields, setFields] = useState<FieldOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // Drops responses from superseded requests so stale data never wins.

@@ -1,11 +1,14 @@
 import { useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
+import { LazySatelliteMap } from "../../components/LazySatelliteMap";
 import { Modal } from "../../components/Modal";
+import type { LatLng } from "../../components/SatelliteMap";
 import { localDate, localTime, zonedToIso } from "../../lib/time";
 import {
   ACTIVITY_TYPES,
   type ActivityLog,
   type ActivityType,
+  type FieldOption,
   type LogInput,
   type Option,
 } from "./api";
@@ -13,13 +16,24 @@ import {
 type Props = {
   log: ActivityLog | null;
   employees: Option[];
-  fields: Option[];
+  fields: FieldOption[];
   timeZone: string;
   defaultDate: string;
+  /** Show a satellite picker for the log's location. */
+  liveMap: boolean;
   onSave: (input: LogInput) => Promise<void>;
   onDelete: (() => void) | null;
   onClose: () => void;
 };
+
+function fieldPoint(field: FieldOption | undefined): LatLng | null {
+  return field?.latitude != null && field.longitude != null
+    ? { latitude: field.latitude, longitude: field.longitude }
+    : null;
+}
+
+const formatPoint = (point: LatLng) =>
+  `${point.latitude.toFixed(5)}, ${point.longitude.toFixed(5)}`;
 
 export function LogFormDialog({
   log,
@@ -27,6 +41,7 @@ export function LogFormDialog({
   fields,
   timeZone,
   defaultDate,
+  liveMap,
   onSave,
   onDelete,
   onClose,
@@ -44,6 +59,18 @@ export function LogFormDialog({
     transcript: log?.transcript ?? "",
     reviewed: log ? log.reviewedAt !== null : false,
   });
+  const logPoint =
+    log?.latitude != null && log.longitude != null
+      ? { latitude: log.latitude, longitude: log.longitude }
+      : null;
+  // A new log follows its field's location until someone picks a spot.
+  const [point, setPoint] = useState<LatLng | null>(
+    () => logPoint ?? fieldPoint(fields.find((f) => f.id === form.fieldId)),
+  );
+  const [followField, setFollowField] = useState(!logPoint);
+  // Where the map is centered; changes only on deliberate moves, not clicks.
+  const [view, setView] = useState<LatLng | null>(point);
+  const [locating, setLocating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,15 +80,58 @@ export function LogFormDialog({
       event: ChangeEvent<
         HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
       >,
-    ) =>
-      setForm({
-        ...form,
-        [key]:
-          event.target instanceof HTMLInputElement &&
-          event.target.type === "checkbox"
-            ? event.target.checked
-            : event.target.value,
-      });
+    ) => {
+      const { target } = event;
+      const value =
+        target instanceof HTMLInputElement && target.type === "checkbox"
+          ? target.checked
+          : target.value;
+      setForm((current) => ({ ...current, [key]: value }));
+    };
+
+  function moveTo(next: LatLng | null, follow: boolean) {
+    setPoint(next);
+    setView(next);
+    setFollowField(follow);
+  }
+
+  function changeField(event: ChangeEvent<HTMLSelectElement>) {
+    set("fieldId")(event);
+    // Without a live map there is no way to pick, so always follow the field.
+    if (followField || !liveMap) {
+      moveTo(fieldPoint(fields.find((f) => f.id === event.target.value)), true);
+    }
+  }
+
+  function locateMe() {
+    if (!navigator.geolocation) {
+      setError("This browser can't share its location.");
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocating(false);
+        setError(null);
+        moveTo(
+          {
+            latitude: Number(position.coords.latitude.toFixed(6)),
+            longitude: Number(position.coords.longitude.toFixed(6)),
+          },
+          false,
+        );
+      },
+      (failure) => {
+        setLocating(false);
+        setError(
+          failure.code === failure.PERMISSION_DENIED
+            ? "Location access was denied. Click the map to choose a spot instead."
+            : "Couldn't get your location. Click the map to choose a spot instead.",
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -87,6 +157,8 @@ export function LogFormDialog({
         applicationRate: rate ? Number(rate) : null,
         rateUnit: form.rateUnit.trim() || null,
         transcript: form.transcript.trim() || null,
+        latitude: point?.latitude ?? null,
+        longitude: point?.longitude ?? null,
         reviewed: form.reviewed,
       });
     } catch (caught) {
@@ -94,6 +166,15 @@ export function LogFormDialog({
       setSaving(false);
     }
   }
+
+  const selectedField = fields.find((f) => f.id === form.fieldId);
+  const selectedFieldPoint = fieldPoint(selectedField);
+  // Something sensible to look at before any location exists.
+  const fallbackView = selectedFieldPoint ??
+    fields.map(fieldPoint).find(Boolean) ?? {
+      latitude: 41.21,
+      longitude: -96.62,
+    };
 
   return (
     <Modal
@@ -126,7 +207,7 @@ export function LogFormDialog({
         </label>
         <label>
           Field
-          <select required value={form.fieldId} onChange={set("fieldId")}>
+          <select required value={form.fieldId} onChange={changeField}>
             {fields.map((field) => (
               <option key={field.id} value={field.id}>
                 {field.name}
@@ -181,6 +262,52 @@ export function LogFormDialog({
             onChange={set("rateUnit")}
           />
         </label>
+
+        {liveMap && (
+          <div className="location-field span-3">
+            <div className="location-header">
+              <span>Location</span>
+              <span className="location-coords">
+                {point
+                  ? `${formatPoint(point)}${followField ? " · field location" : ""}`
+                  : "Not set"}
+              </span>
+            </div>
+            <LazySatelliteMap
+              className="picker-map"
+              center={view ?? fallbackView}
+              marker={point}
+              zoom={16}
+              onPick={(next) => {
+                setPoint(next);
+                setFollowField(false);
+              }}
+              label="Map for choosing where the work happened. Click to move the pin."
+            />
+            <div className="location-actions">
+              <span className="location-hint">
+                Click the map to move the pin.
+              </span>
+              <button
+                type="button"
+                className="text-button"
+                disabled={!selectedFieldPoint}
+                onClick={() => moveTo(selectedFieldPoint, true)}
+              >
+                Use field location
+              </button>
+              <button
+                type="button"
+                className="text-button"
+                disabled={locating}
+                onClick={locateMe}
+              >
+                {locating ? "Locating…" : "Use my current location"}
+              </button>
+            </div>
+          </div>
+        )}
+
         <label className="span-3">
           Transcript
           <textarea
@@ -204,11 +331,7 @@ export function LogFormDialog({
         )}
         <div className="form-actions span-3">
           {onDelete && (
-            <button
-              type="button"
-              className="danger-link"
-              onClick={onDelete}
-            >
+            <button type="button" className="danger-link" onClick={onDelete}>
               Delete log
             </button>
           )}
