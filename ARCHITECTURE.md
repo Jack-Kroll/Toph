@@ -1,48 +1,119 @@
 # Toph architecture
 
-## Product scope
+## Scope
 
-Toph is a focused implementation of the supplied dashboard design, including its default and expanded activity-log states. The first release will not implement complete versions of the other products represented by the sidebar navigation.
+Toph is a focused implementation of the supplied dashboard, in both its default and expanded-entry states, backed by a real database. It does not implement the other products in the sidebar or the mobile recording app. The data model and API assume a mobile app writes logs, and the dashboard updates live when it does.
 
-The dashboard is expected to support authentication, persistent activity records, calculated summary metrics, search and filtering, expandable rows, audio playback, maps, and persistent tags.
+## Request flow
 
-## UI decisions
+```text
+Browser (React SPA on Netlify CDN)
+  │  supabase-js with the publishable key + the user's JWT
+  ▼
+Supabase
+  ├─ Auth        email/password sessions
+  ├─ PostgREST   tables and RPCs, filtered by row-level security
+  ├─ Realtime    activity_logs changes, filtered by the same policies
+  └─ Storage     private "recordings" bucket, per-farm folders
+  ▼
+Postgres (schema in supabase/migrations)
+```
 
-- The supplied screenshots are the visual source of truth for desktop proportions, text, row content, borders, and colors. The dashboard is tuned for a 1440px desktop viewport and adapts to narrower screens.
-- Plain CSS gives direct control over the reference's small spacing and typography differences. No component framework or styling dependency is needed for this focused screen.
-- Arial matches the supplied screenshot's letterforms closely and avoids a remote font-loading dependency.
-- The map and profile photo are cropped reference assets. A larger map dialog demonstrates expansion; live map services are deferred.
-- State is local to React and resets on refresh. Statistics are fixed reference values. Audio playback uses the browser's speech synthesis as a demonstrator because no recording was supplied.
-- Icons are small inline SVGs. Reduced motion, keyboard focus, labeled controls, and narrow-screen table scrolling are included.
+There is no custom API server. Row-level security in Postgres is the authorization layer, so the browser can query tables directly.
 
-## Technical decisions
+## Decisions
 
 ### React, TypeScript, and Vite
 
-The application is a highly interactive dashboard that does not require server-side rendering. Vite provides a small static build that Netlify can deploy directly, while TypeScript makes the database and UI boundaries explicit.
+The dashboard is one interactive, signed-in screen. It has no public pages that need server rendering or SEO, so a Next.js-style server adds hosting complexity without benefit. Vite produces a static bundle that Netlify serves from its CDN. TypeScript, together with the generated `Database` types, catches schema drift at build time: renaming a column breaks the build instead of failing in production.
 
-### Supabase
+### Plain CSS, no component library
 
-Supabase keeps the relational database, authentication, and audio storage in one service. Postgres fits the relationships among organizations, workers, fields, activity logs, and tags. Row-level security will isolate each organization's data.
+The brief grades pixel accuracy. The design's 8–14px type, custom pills, and waveform don't match any component library's defaults, and overriding a library costs more than writing the CSS directly. Tailwind was considered, but the design has many one-off measurements, which would become arbitrary-value utilities with no real advantage.
+
+### Supabase over a custom backend or Firebase
+
+- **Relational data.** Farms, employees, fields, logs, and tags are naturally relational. Firebase's document model would require denormalizing names and managing joins in client code.
+- **One service for four needs.** Supabase provides Postgres, Auth, file storage for audio, and Realtime together. A custom Express API would also need hosting, auth, and upload handling, and Netlify Functions have cold starts and no persistent connection pool.
+- **Security lives with the data.** Policies are SQL in version-controlled migrations, so a reviewer can read exactly who can see what.
+- **Tradeoff.** Moving business logic into the database (RPCs, triggers) ties the app to Postgres. That's acceptable here because Postgres is the part least likely to change.
 
 ### Netlify
 
-Netlify will build the Vite application from the `main` branch and serve it from its global CDN. Deploy previews can be used for visual review before changes reach the production URL.
+This was a hard requirement. It also fits the design: static hosting, deploys from `main`, preview deploys, and `netlify.toml` checked in so the build is reproducible.
 
-## Planned data model
+## Data model
 
-- `organizations`
-- `profiles`
-- `employees`
-- `fields`
-- `activity_logs`
-- `tags`
-- `activity_log_tags`
+```text
+organizations ─┬─< profiles (1:1 with auth.users)
+               ├─< employees ─┐
+               ├─< fields ────┤
+               ├─< activity_logs >─┘ ── activity_log_tags >── tags
+               └─< tags
+```
 
-Database migrations and row-level security policies belong in `supabase/migrations` so the backend can be recreated and reviewed from the repository.
+| Table | Notes |
+| --- | --- |
+| `organizations` | A farm. `timezone` says what "today" means; `demo_as_of` pins "today" for demo farms. |
+| `profiles` | Links an auth user to one farm, with a role (`admin`, `manager`, `viewer`). |
+| `employees`, `fields` | Workers and fields. Fields store crop, acres, and coordinates. |
+| `activity_logs` | One recording: who, what, where, when, product and rate, transcript, audio path, GPS, response accuracy, and `reviewed_at`. |
+| `tags`, `activity_log_tags` | Per-farm tag vocabulary with a many-to-many link to logs. Tag names are unique per farm, ignoring case. |
 
-## Security boundaries
+Key choices:
 
-- The Supabase publishable key may be used in the browser with row-level security enabled.
-- Supabase database passwords and service-role keys must never be exposed to the client or committed.
-- Stored recordings should require an authenticated user with access to the corresponding organization.
+- **`organization_id` on every table**, defaulted to the caller's farm. RLS policies stay one line each, and the client never sends a farm ID it could forge.
+- **Composite foreign keys** `(organization_id, employee_id)` → `employees(organization_id, id)`. RLS limits what a user can *see*, but a plain foreign key would still accept an employee ID from another farm. The composite key makes that impossible in the database itself.
+- **`timestamptz` plus a farm time zone** instead of separate date and time columns. Shifts can cross midnight, and the dashboard has to agree with the farm about which day "today" is, whichever time zone the viewer is in. `src/lib/time.ts` converts through the farm's IANA zone, and its tests cover DST.
+- **`reviewed_at` instead of a status enum.** "New Employee Logs" means unreviewed logs. A timestamp answers both "is it new?" and "when was it reviewed?". The sidebar badge and "1 New" count come from the same column.
+- **Check constraints** on activity type, accuracy (0–100), non-negative rates, coordinate ranges, and `ended_at >= started_at`, so bad data is rejected even if it bypasses the UI (for example, from the mobile app).
+- **Indexes** on `(organization_id, started_at desc)` and on the foreign keys, matching the dashboard's query pattern.
+
+## Security
+
+- RLS is enabled on every table. Each policy compares `organization_id` to `private.current_org_id()`, a `security definer` function in a schema the API doesn't expose, which avoids policy recursion on `profiles`.
+- Supabase's default table grants were narrowed (second migration). Users can update only their own `full_name` and `avatar_url`; without this, a user could change their own `organization_id` and read another farm's data. `npm run db:test` checks that this is blocked.
+- The `anon` role has no table access. An unauthenticated request returns `permission denied`.
+- `dashboard_stats()` is `security invoker`, so it can only count rows the caller can already see.
+- `reset_demo_data()` is `security definer` so it can reseed the farm, but it verifies the caller is an admin of a demo farm first. Supabase's advisor flags this function; the flag is expected.
+- Storage objects live under `<organization_id>/…`, and policies restrict reads, uploads, and deletes to that prefix. Playback uses short-lived signed URLs.
+- Only the publishable key reaches the browser. The database password and secret keys are never used by the app.
+
+## Onboarding and demo data
+
+A trigger on `auth.users` creates a farm, an admin profile, and a copy of the design's data for every new account (`private.seed_demo_org`). This has three benefits:
+
+1. Reviewers can sign up and see a working dashboard immediately.
+2. Reviewers never overwrite each other's changes, because each one has their own copy.
+3. The seed lives in a migration, so it matches the schema exactly and can be reapplied with `reset_demo_data()`.
+
+The seed reproduces the design's numbers from real rows rather than hard-coded values. April 22 has 5 recordings, one of them unreviewed. The four unreviewed April logs are the four rows in the design. Twelve employees are active. April's accuracy averages exactly 90.
+
+## Frontend structure
+
+- `useSession` restores the session and gates the app between `LoginPage` and `DashboardPage`. The dashboard is keyed by user ID so switching accounts can't show stale data.
+- `useDashboardData` loads profile, logs, stats, and form options in parallel, ignores responses from superseded requests, and refreshes when a Realtime event arrives for `activity_logs`.
+- `features/activity-logs/api.ts` is the only module that knows table and column names. It maps snake_case rows to UI types and turns PostgREST errors into exceptions.
+- Filtering and sorting are pure functions (`filters.ts`) with unit tests. They run on the client because a farm's monthly log volume is small and filters should respond instantly. If volume grows, the same filters move to PostgREST query parameters with pagination.
+- Tag removal updates the UI first and reloads if the request fails. Creates, edits, and deletes wait for the server, because the user needs to know the write actually succeeded.
+
+## UI decisions
+
+- The supplied screenshots are the visual source of truth, tuned for a 1440px desktop viewport, with narrower layouts down to phone width.
+- Additions beyond the design are deliberately small and reuse its visual language: the **New Log** pill, a bulk-action toolbar that replaces the filter pills when rows are checked, an **Edit** link beside "Summary", and one line for product, rate, and accuracy.
+- Arial matches the screenshot's letterforms and avoids loading a remote font.
+- The map and avatar are images cropped from the design. A live map (MapLibre with satellite tiles) is the next step; field and log coordinates are already stored.
+- Includes keyboard focus styles, Escape to close menus and dialogs, labeled icon buttons, `role="alert"`/`status` for feedback, and reduced-motion support.
+
+## Testing
+
+- `npm test`: Vitest covers time-zone conversion (including DST and near-midnight dates), search, month and reviewed filters, and sorting.
+- `npm run db:test`: creates two users inside a transaction that is rolled back. It checks farm isolation, the seeded stats (`5 / 1 / 12 / 90`), that the organization-hopping attack is blocked, and that reset works.
+- Manual browser check: demo login; add a tag and refresh; create, review, and delete a log; reset demo data; open the map.
+
+## Next steps
+
+- End-to-end Playwright test covering login, editing, and persistence after refresh
+- Live satellite map with the recorded GPS point
+- Audio upload from the dashboard and a real waveform generated from the file
+- Server-side pagination for large farms

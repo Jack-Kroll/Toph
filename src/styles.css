@@ -578,7 +578,7 @@ input[type="checkbox"]:checked:after {
   padding: 24px;
   backdrop-filter: blur(3px);
 }
-.map-modal {
+.modal {
   width: min(900px, 100%);
   background: #fff;
   border-radius: 16px;
@@ -615,6 +615,341 @@ input[type="checkbox"]:checked:after {
 }
 .account {
   margin-bottom: 12px;
+}
+.map-modal {
+  width: min(900px, 100%);
+}
+.map-caption {
+  margin: 10px 2px 0;
+  font-size: 12px;
+  color: #888;
+}
+.field-cell {
+  text-transform: uppercase;
+}
+.summary-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.text-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  padding: 2px 4px;
+  font-size: 12px;
+  color: #8a8a8a;
+  border-radius: 4px;
+}
+.text-button:hover {
+  color: #378b6b;
+  background: #f2f6f3;
+}
+.log-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+  margin: 12px 0 0;
+  font-size: 12px;
+}
+.log-facts div {
+  display: flex;
+  gap: 6px;
+}
+.log-facts dt {
+  color: #b7b7b7;
+}
+.log-facts dd {
+  margin: 0;
+  color: #555;
+}
+.selection-count {
+  font-size: 12px;
+  color: #797979;
+  margin-right: 3px;
+}
+.danger-pill {
+  color: #b54040;
+}
+.pill:disabled {
+  opacity: 0.5;
+}
+.filter-popover {
+  max-height: min(430px, 70vh);
+  overflow-y: auto;
+}
+.popover p:not(:first-child) {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #f0f0f0;
+}
+.skeleton-row td {
+  padding: 0 24px;
+}
+.skeleton-row span {
+  display: block;
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, #f3f3f3, #ebebeb, #f3f3f3);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s linear infinite;
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+.account-menu {
+  left: 0;
+  right: auto;
+  top: 44px;
+  width: 224px;
+}
+.account-menu p {
+  text-transform: none;
+  font-size: 12px;
+  color: #151515;
+  margin-bottom: 2px;
+}
+.account-email {
+  display: block;
+  font-size: 11px;
+  color: #999;
+  margin: 0 8px 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 30;
+  padding: 11px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #fff;
+  background: #1d1d1d;
+  box-shadow: 0 10px 30px #0002;
+}
+.toast.error {
+  background: #9c3434;
+}
+.form-modal {
+  width: min(640px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+.confirm-modal {
+  width: min(420px, 100%);
+}
+.modal-message {
+  margin: 0 0 20px;
+  font-size: 13px;
+  line-height: 19px;
+  color: #555;
+}
+.log-form {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.log-form label,
+.auth-form label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: #666;
+}
+.log-form input:not([type="checkbox"]),
+.log-form select,
+.log-form textarea,
+.auth-form input {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  color: #151515;
+  background: #fff;
+}
+.log-form textarea {
+  resize: vertical;
+  line-height: 18px;
+}
+.log-form input:focus-visible,
+.log-form select:focus-visible,
+.log-form textarea:focus-visible,
+.auth-form input:focus-visible {
+  outline: 2px solid #72b88c;
+  outline-offset: 0;
+  border-color: transparent;
+}
+.log-form .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.span-3 {
+  grid-column: 1 / -1;
+}
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.primary-button,
+.secondary-button,
+.danger-button {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  border: 1px solid transparent;
+}
+.primary-button {
+  background: #111;
+  color: #fff;
+}
+.primary-button:hover {
+  background: #2a2a2a;
+}
+.secondary-button {
+  border-color: #e0e0e0;
+  background: #fff;
+}
+.secondary-button:hover {
+  background: #f7f7f7;
+}
+.danger-button {
+  background: #b54040;
+  color: #fff;
+}
+.danger-button:hover {
+  background: #9c3434;
+}
+.primary-button:disabled,
+.secondary-button:disabled,
+.danger-button:disabled {
+  opacity: 0.6;
+}
+.danger-link {
+  margin-right: auto;
+  border: 0;
+  padding: 6px 2px;
+  font-size: 13px;
+  color: #b54040;
+}
+.form-error,
+.form-notice {
+  margin: 0;
+  padding: 9px 11px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 17px;
+}
+.form-error {
+  color: #9c3434;
+  background: #fbeeee;
+}
+.form-notice {
+  color: #2f7a5d;
+  background: #e6f0eb;
+}
+.app-loading {
+  min-height: 100vh;
+}
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background: #fafafa;
+}
+.auth-card {
+  width: min(400px, 100%);
+  padding: 32px 30px 26px;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px #0000000a;
+}
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 26px;
+}
+.auth-logo {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: #fff;
+  background: #426e63;
+}
+.auth-card h1 {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 500;
+}
+.auth-subtitle {
+  margin: 0 0 22px;
+  font-size: 13px;
+  line-height: 18px;
+  color: #8a8a8a;
+}
+.demo-button {
+  width: 100%;
+  height: 40px;
+}
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  font-size: 11px;
+  color: #b4b4b4;
+  text-transform: uppercase;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #eee;
+}
+.auth-form {
+  display: grid;
+  gap: 13px;
+}
+.auth-form .secondary-button {
+  height: 40px;
+  margin-top: 3px;
+}
+.auth-switch {
+  margin: 20px 0 0;
+  text-align: center;
+  font-size: 12px;
+  color: #8a8a8a;
+}
+.auth-switch button {
+  border: 0;
+  padding: 0;
+  color: #378b6b;
+  font-size: 12px;
+}
+@media (max-width: 650px) {
+  .log-form {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 @media (min-width: 1600px) {
   .sidebar {
