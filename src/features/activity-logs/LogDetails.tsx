@@ -195,8 +195,19 @@ export function LogDetails({
             </div>
           )}
         </div>
+        {/* Facts share the heading line so the row keeps the design's height. */}
         <div className="summary-heading">
           <h3>Summary</h3>
+          <span className="log-facts">
+            {application.length > 0 && (
+              <span title="Product applied">{application.join(" · ")}</span>
+            )}
+            {log.responseAccuracy !== null && (
+              <span title="Response accuracy">
+                {Math.round(log.responseAccuracy)}% accuracy
+              </span>
+            )}
+          </span>
           <button className="text-button" onClick={onEdit}>
             <Icon name="edit" size={13} />
             Edit
@@ -205,22 +216,6 @@ export function LogDetails({
         <p className="summary">
           {log.transcript ? `"${log.transcript}` : "No transcript recorded."}
         </p>
-        {(application.length > 0 || log.responseAccuracy !== null) && (
-          <dl className="log-facts">
-            {application.length > 0 && (
-              <div>
-                <dt>Applied</dt>
-                <dd>{application.join(" · ")}</dd>
-              </div>
-            )}
-            {log.responseAccuracy !== null && (
-              <div>
-                <dt>Accuracy</dt>
-                <dd>{Math.round(log.responseAccuracy)}%</dd>
-              </div>
-            )}
-          </dl>
-        )}
       </div>
       <div className="map-details">
         <button

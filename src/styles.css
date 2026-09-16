@@ -10,7 +10,7 @@
   flex-shrink: 0;
   border: 1px solid #e8e8e8;
   border-radius: 16px;
-  padding: 12px 10px 10px;
+  padding: 12px 8px 10px 5px;
   display: flex;
   flex-direction: column;
   min-height: calc(100vh - 20px);
@@ -60,17 +60,17 @@
 }
 .inbox {
   margin-left: auto;
-  margin-right: 8px;
+  margin-right: 10px;
 }
 .nav-group {
-  margin-bottom: 15px;
+  margin-bottom: 11px;
 }
 .nav-group h2 {
   font-size: 8px;
   font-weight: 400;
   text-transform: uppercase;
   color: #b4b4b4;
-  margin: 0 7px 8px;
+  margin: 0 7px 7px;
   line-height: 10px;
 }
 .nav-item {
@@ -250,7 +250,7 @@
   gap: 7px;
   border: 1px solid #e5e5e5;
   border-radius: 30px;
-  padding: 5px 12px;
+  padding: 5px 14px;
   font-size: 12px;
   line-height: 17px;
   white-space: nowrap;
@@ -288,13 +288,13 @@ table {
   color: #666;
 }
 .check-col {
-  width: 60px;
+  width: 75px;
 }
 .time-col {
-  width: 190px;
+  width: 180px;
 }
 .view-col {
-  width: 83px;
+  width: 101px;
 }
 th {
   text-align: left;
@@ -309,6 +309,7 @@ th {
 th:first-child,
 td:first-child {
   text-align: center;
+  padding: 0 0 0 7px;
 }
 td {
   height: 51px;
@@ -417,7 +418,7 @@ input[type="checkbox"]:checked:after {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 34px;
-  padding: 34px 32px 38px 34px;
+  padding: 34px 32px 35px 34px;
 }
 .recording-details,
 .map-details {
@@ -630,7 +631,7 @@ input[type="checkbox"]:checked:after {
 .summary-heading {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
+  gap: 12px;
 }
 .text-button {
   display: inline-flex;
@@ -648,21 +649,17 @@ input[type="checkbox"]:checked:after {
 }
 .log-facts {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 22px;
-  margin: 12px 0 0;
-  font-size: 12px;
+  gap: 12px;
+  min-width: 0;
+  margin-left: auto;
+  font-size: 11px;
+  color: #a5a5a5;
+  white-space: nowrap;
+  overflow: hidden;
 }
-.log-facts div {
-  display: flex;
-  gap: 6px;
-}
-.log-facts dt {
-  color: #b7b7b7;
-}
-.log-facts dd {
-  margin: 0;
-  color: #555;
+.log-facts span {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .selection-count {
   font-size: 12px;
