@@ -140,6 +140,18 @@ Demo sessions show the design's map image, matching the Figma. Email accounts ge
 - **Stacking contained.** `isolation: isolate` keeps Leaflet's high z-index panes below menus and dialogs.
 - **Farmland coordinates.** The demo fields sit on four real quarter-section crop fields in eastern Nebraska, so live maps show farmland rather than a town.
 
+## Settings
+
+- **Profile photos** go to a public `avatars` bucket. Photos are low-sensitivity, and public URLs cache well. Storage policies only let users add, list, or delete files in their own `<user_id>/` folder.
+  - The browser center-crops and scales each photo to 256 px WebP before upload, so files stay around 10 KB whatever the phone camera produces.
+  - Each upload gets a new file name, which avoids stale cached copies, and the old file is deleted.
+  - `profiles.avatar_path` stores the Storage path, not a URL. A check constraint requires the path to be in the user's own folder, so a profile can't point at an arbitrary external image.
+- **Farm name and time zone** are the only organization columns users can update, and a policy limits that to the farm's admins. A trigger rejects time zones Postgres doesn't know, because a check constraint can't query the catalog.
+- **Account deletion** is `delete_my_account()`, a `security definer` function, because deleting from `auth.users` needs more privilege than the browser has.
+  - It deletes the user and, if nobody else belongs to the farm, the farm and all its data.
+  - The client first removes the user's photos and the farm's recordings through the Storage API. Storage files can't be safely deleted with SQL.
+  - The confirmation requires typing DELETE, since the action can't be undone.
+
 ## UI decisions
 
 - The supplied screenshots are the visual source of truth, tuned for a 1440px desktop viewport, with narrower layouts down to phone width.

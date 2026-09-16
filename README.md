@@ -22,6 +22,7 @@ Full-stack implementation of the Toph farm activity dashboard from the Fall 2026
 - Live updates: logs added or changed elsewhere (for example by the mobile app) appear without a refresh
 - Reset demo data from the account menu (inbox icon beside the farm name)
 - Loading, empty, error, and success states
+- Settings page: upload or remove a profile photo, change your name, change the farm name and time zone, and delete your account (or demo)
 - Real URLs for every sidebar section; unfinished sections show an illustrated "under construction" page
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the reasoning behind each decision.
@@ -69,9 +70,10 @@ In Supabase, **Allow anonymous sign-ins** is on (for the demo) and **Confirm ema
 src/
   App.tsx                          Auth gate and routes
   navigation.ts                    Sidebar sections, paths, and descriptions
-  pages/                           Login, Dashboard, Under Construction
+  pages/                           Login, Dashboard, Settings, Under Construction
   components/                      App layout, Sidebar, Modal/ConfirmDialog, Icon, illustration
   features/activity-logs/          API calls, filters, expanded row, log form
+  features/settings/               Profile photo, farm, and account deletion calls
   hooks/                           Session and dashboard data (with Realtime)
   lib/                             Supabase client, time-zone helpers
   types/database.ts                Generated database types
@@ -89,4 +91,4 @@ public/reference/                  Avatar and map images from the design
 - Demo recordings are generated with macOS text-to-speech (`scripts/generate-demo-audio.py`), not real field recordings. Logs created in the dashboard have no audio, so **Play Recording** reads their transcript aloud instead.
 - Demo sessions show the design's map image; the live map (Esri World Imagery, no API key) appears for email accounts. Esri's terms allow this for development and demos; production use would need an Esri or MapTiler plan. To preview the live map in a local demo session, add `?liveMap` to the URL (development builds only).
 - Demo farms treat April 22, 2026 as "today" so the seeded numbers match the design. Farms without `demo_as_of` use the real date in their time zone.
-- Sidebar sections other than Dashboard are placeholders that show an "under construction" page.
+- Sidebar sections other than Dashboard and Settings are placeholders that show an "under construction" page.

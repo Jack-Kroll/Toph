@@ -72,5 +72,37 @@ do $$ begin
 end $$;
 insert into results select 'logs after reset (expect 14)', count(*)::text from public.activity_logs;
 
+-- Settings, as the email user again.
+select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
+update public.organizations set name = 'Renamed Farm' where id = private.current_org_id();
+insert into results select 'rename own farm (expect Renamed Farm)', name from public.organizations;
+update public.organizations set name = 'Hijacked'
+  where id = (select organization_id from public.profiles where id = '33333333-3333-3333-3333-333333333333');
+do $$ begin
+  begin
+    update public.organizations set timezone = 'Mars/Olympus' where id = private.current_org_id();
+    insert into results values ('bad time zone', 'ALLOWED (bad)');
+  exception when invalid_parameter_value then insert into results values ('bad time zone', 'rejected (expected)');
+  end;
+  begin
+    update public.profiles set avatar_path = '33333333-3333-3333-3333-333333333333/x.webp' where id = auth.uid();
+    insert into results values ('avatar in another folder', 'ALLOWED (bad)');
+  exception when check_violation then insert into results values ('avatar in another folder', 'rejected (expected)');
+  end;
+  begin
+    update public.organizations set demo_as_of = current_date where id = private.current_org_id();
+    insert into results values ('edit demo flag', 'ALLOWED (bad)');
+  exception when insufficient_privilege then insert into results values ('edit demo flag', 'blocked (expected)');
+  end;
+end $$;
+update public.profiles set avatar_path = '11111111-1111-1111-1111-111111111111/photo.webp' where id = auth.uid();
+insert into results select 'own avatar path (expect saved)', coalesce(avatar_path, 'missing') from public.profiles where id = auth.uid();
+select public.delete_my_account();
+reset role;
+insert into results select 'other farm renamed (expect 0, checked as admin)', count(*)::text from public.organizations where name = 'Hijacked';
+insert into results select 'deleted user and farm (expect 0,0)',
+  (select count(*) from auth.users where id = '11111111-1111-1111-1111-111111111111')::text || ',' ||
+  (select count(*) from public.organizations where name = 'Renamed Farm')::text;
+
 select * from results;
 rollback;

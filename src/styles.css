@@ -1360,3 +1360,113 @@ a.nav-item:focus-visible,
 .default-avatar svg {
   fill: #a9b3ae;
 }
+.settings-grid {
+  display: grid;
+  gap: 16px;
+  max-width: 720px;
+}
+.settings-card {
+  padding: 22px 24px 24px;
+  border: 1px solid #ededed;
+  border-radius: 16px;
+}
+.settings-card h2 {
+  margin: 0 0 16px;
+  font-size: 15px;
+  font-weight: 500;
+}
+.settings-card > p {
+  margin: 0 0 16px;
+  font-size: 13px;
+  line-height: 19px;
+  color: #666;
+}
+.skeleton-card {
+  height: 180px;
+  background: #fafafa;
+  animation: pulse 1s ease-in-out infinite alternate;
+}
+.photo-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.photo-row .avatar {
+  flex-shrink: 0;
+}
+.settings-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.settings-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 17px;
+  color: #9a9a9a;
+}
+.settings-form {
+  display: grid;
+  gap: 14px;
+}
+.settings-form label,
+.settings-field {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: #666;
+}
+.settings-field p {
+  margin: 0;
+  font-size: 13px;
+  color: #151515;
+}
+.settings-form input,
+.settings-form select,
+.confirm-input {
+  width: 100%;
+  max-width: 420px;
+  padding: 8px 9px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #151515;
+  background: #fff;
+}
+.settings-form input:disabled,
+.settings-form select:disabled {
+  color: #999;
+  background: #fafafa;
+}
+.settings-form input:focus-visible,
+.settings-form select:focus-visible,
+.confirm-input:focus-visible {
+  outline: 2px solid #72b88c;
+  outline-offset: 0;
+  border-color: transparent;
+}
+.settings-form .settings-hint {
+  margin-top: -6px;
+}
+.danger-card {
+  border-color: #f2dada;
+}
+.danger-card h2 {
+  color: #9c3434;
+}
+.confirm-input {
+  max-width: none;
+  margin-bottom: 18px;
+  letter-spacing: 0.04em;
+}
+@media (max-width: 650px) {
+  .settings-card {
+    padding: 18px;
+  }
+  .photo-row {
+    align-items: flex-start;
+  }
+}

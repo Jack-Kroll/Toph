@@ -82,12 +82,7 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
   {
     title: "Other",
     items: [
-      {
-        label: "Settings",
-        icon: "settings",
-        path: "/settings",
-        summary: "Farm details, time zone, and account preferences.",
-      },
+      { label: "Settings", icon: "settings", path: "/settings" },
       {
         label: "Support",
         icon: "support",

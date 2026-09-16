@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { Icon } from "../components/Icon";
 import { supabase } from "../lib/supabase";
@@ -70,6 +70,10 @@ export function LoginPage() {
   }
 
   const signingUp = mode === "sign-up";
+
+  useEffect(() => {
+    document.title = signingUp ? "Create your farm · Toph" : "Sign in · Toph";
+  }, [signingUp]);
 
   return (
     <main className="auth-page">

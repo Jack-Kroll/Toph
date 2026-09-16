@@ -11,13 +11,17 @@ import {
 } from "../features/activity-logs/api";
 
 export type Organization = {
+  id: string;
   name: string;
   timezone: string;
   isDemo: boolean;
 };
 
 export type Profile = {
+  id: string;
   fullName: string;
+  /** Path in the avatars bucket, or null for no photo. */
+  avatarPath: string | null;
   role: string;
   organization: Organization;
 };
@@ -25,15 +29,20 @@ export type Profile = {
 async function fetchProfile(userId: string): Promise<Profile> {
   const { data, error } = await supabase
     .from("profiles")
-    .select("full_name, role, organization:organizations(name, timezone, demo_as_of)")
+    .select(
+      "id, full_name, role, avatar_path, organization:organizations(id, name, timezone, demo_as_of)",
+    )
     .eq("id", userId)
     .single();
   if (error) throw new Error(error.message);
   if (!data.organization) throw new Error("Your account has no farm.");
   return {
+    id: data.id,
     fullName: data.full_name,
+    avatarPath: data.avatar_path,
     role: data.role,
     organization: {
+      id: data.organization.id,
       name: data.organization.name,
       timezone: data.organization.timezone,
       isDemo: data.organization.demo_as_of !== null,

@@ -29,6 +29,7 @@
 - [x] Private demo farm per browser (anonymous sign-in), with reset and automatic cleanup
 - [x] Bulk mark reviewed, mark new, and delete
 - [x] Empty farms for new accounts, with inline employee and field creation
+- [x] Settings: profile photo, name, farm name and time zone, delete account
 - [x] Routed sidebar with "under construction" pages for unfinished sections
 
 ## Deliberately out of scope
