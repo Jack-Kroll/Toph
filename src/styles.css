@@ -1247,3 +1247,19 @@ a.nav-item:focus-visible,
     transition: none !important;
   }
 }
+.waveform.seekable {
+  cursor: pointer;
+}
+.wave-bars.loading span {
+  animation: pulse 1s ease-in-out infinite alternate;
+}
+@keyframes pulse {
+  to {
+    opacity: 0.1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wave-bars.loading span {
+    animation: none;
+  }
+}

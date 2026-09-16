@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import type { CSSProperties, FormEvent } from "react";
+import type { CSSProperties, FormEvent, MouseEvent } from "react";
 import { Icon } from "../../components/Icon";
-import { recordingUrl, type ActivityLog } from "./api";
+import type { ActivityLog } from "./api";
+import { BAR_COUNT, useRecording } from "./useRecording";
 
-// Bar heights traced from the design's waveform.
-const BARS = Array.from({ length: 98 }, (_, index) =>
+// Bar heights traced from the design's waveform, shown when a log has no
+// recording to draw from.
+const DESIGN_BARS = Array.from({ length: BAR_COUNT }, (_, index) =>
   index < 8
     ? [12, 23, 34, 44, 50, 43, 34, 22][index]
     : index > 26 && index < 42
@@ -13,7 +15,7 @@ const BARS = Array.from({ length: 98 }, (_, index) =>
         ? 10
         : 6,
 );
-const IDLE_PROGRESS = 55;
+const DESIGN_PROGRESS = 55;
 
 function formatNumber(value: number) {
   return Number.isInteger(value) ? value.toLocaleString() : String(value);
@@ -38,8 +40,10 @@ export function LogDetails({
   onEdit,
   onOpenMap,
 }: Props) {
+  const { recording, loading, failed } = useRecording(log.audioPath);
   const [playing, setPlaying] = useState(false);
-  const [progress, setProgress] = useState(IDLE_PROGRESS);
+  // Percent played; null until playback starts.
+  const [progress, setProgress] = useState<number | null>(null);
   const [tagInput, setTagInput] = useState("");
   const [savingTag, setSavingTag] = useState(false);
   const audio = useRef<HTMLAudioElement | null>(null);
@@ -54,13 +58,13 @@ export function LogDetails({
 
   // Speech playback has no reliable position events, so estimate progress.
   useEffect(() => {
-    if (!playing || audio.current) return;
+    if (!playing || recording) return;
     const timer = window.setInterval(
-      () => setProgress((value) => Math.min(value + 0.35, 100)),
+      () => setProgress((value) => Math.min((value ?? 0) + 0.35, 100)),
       200,
     );
     return () => window.clearInterval(timer);
-  }, [playing]);
+  }, [playing, recording]);
 
   function stop() {
     audio.current?.pause();
@@ -68,36 +72,51 @@ export function LogDetails({
     setPlaying(false);
   }
 
+  function audioElement(url: string) {
+    if (!audio.current) {
+      const element = new Audio(url);
+      element.ontimeupdate = () =>
+        element.duration &&
+        setProgress((element.currentTime / element.duration) * 100);
+      element.onpause = () => setPlaying(false);
+      element.onplay = () => setPlaying(true);
+      element.onended = () => setProgress(null);
+      audio.current = element;
+    }
+    return audio.current;
+  }
+
   async function play() {
     if (playing) return stop();
-    if (log.audioPath) {
-      if (!audio.current) {
-        const element = new Audio(await recordingUrl(log.audioPath));
-        element.ontimeupdate = () =>
-          element.duration &&
-          setProgress((element.currentTime / element.duration) * 100);
-        element.onended = () => {
-          setPlaying(false);
-          setProgress(IDLE_PROGRESS);
-        };
-        audio.current = element;
-      }
-      setPlaying(true);
-      await audio.current.play();
+    if (recording) {
+      await audioElement(recording.url).play();
       return;
     }
-    // No recording uploaded: read the transcript aloud instead.
+    // No playable recording: read the transcript aloud instead.
     if (!window.speechSynthesis || !log.transcript) return;
     const speech = new SpeechSynthesisUtterance(log.transcript);
     speech.rate = 0.95;
     speech.onend = () => {
       setPlaying(false);
-      setProgress(IDLE_PROGRESS);
+      setProgress(null);
     };
     speech.onerror = () => setPlaying(false);
     setProgress(0);
     setPlaying(true);
     window.speechSynthesis.speak(speech);
+  }
+
+  function seek(event: MouseEvent<HTMLDivElement>) {
+    if (!recording) return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const fraction = (event.clientX - bounds.left) / bounds.width;
+    const element = audioElement(recording.url);
+    const jump = () => {
+      element.currentTime = fraction * element.duration;
+      setProgress(fraction * 100);
+    };
+    if (element.readyState >= 1) jump();
+    else element.addEventListener("loadedmetadata", jump, { once: true });
   }
 
   async function submitTag(event: FormEvent) {
@@ -113,6 +132,12 @@ export function LogDetails({
     }
   }
 
+  const heights = recording
+    ? recording.peaks.map((peak) => Math.max(3, Math.round(peak * 60)))
+    : DESIGN_BARS;
+  // Without a recording, rest where the design shows the playhead.
+  const shownProgress = progress ?? (recording ? null : DESIGN_PROGRESS);
+
   const application = [
     log.productName,
     log.applicationRate !== null &&
@@ -122,32 +147,50 @@ export function LogDetails({
   return (
     <div className="entry-details">
       <div className="recording-details">
-        <div className="waveform" aria-label="Recording waveform">
-          <div className="wave-bars">
-            {BARS.map((height, index) => (
+        <div
+          className={`waveform ${recording ? "seekable" : ""}`}
+          aria-label="Recording waveform"
+          aria-busy={loading}
+          onClick={seek}
+        >
+          <div className={`wave-bars ${loading ? "loading" : ""}`}>
+            {heights.map((height, index) => (
               <span
                 key={index}
-                style={{ height, opacity: index < progress ? 0.83 : 0.2 }}
+                style={{
+                  height,
+                  opacity:
+                    shownProgress === null ||
+                    (index / BAR_COUNT) * 100 < shownProgress
+                      ? 0.83
+                      : 0.2,
+                }}
               />
             ))}
           </div>
           <div
             className="playhead"
-            style={{ left: `${progress}%` } as CSSProperties}
+            style={{ left: `${shownProgress ?? 0}%` } as CSSProperties}
           />
         </div>
         <button
           className="wide-button play-button"
           onClick={() => play().catch(stop)}
-          disabled={!log.audioPath && !log.transcript}
+          disabled={loading || (!recording && !log.transcript)}
           title={
-            log.audioPath
+            recording
               ? undefined
-              : "No recording uploaded; plays a spoken reading of the transcript"
+              : failed
+                ? "The recording couldn't be loaded; plays a spoken reading of the transcript"
+                : "No recording uploaded; plays a spoken reading of the transcript"
           }
         >
           <Icon name={playing ? "pause" : "play"} size={15} />
-          {playing ? "Pause Recording" : "Play Recording"}
+          {loading
+            ? "Loading Recording…"
+            : playing
+              ? "Pause Recording"
+              : "Play Recording"}
         </button>
         <div className="tag-area">
           <button

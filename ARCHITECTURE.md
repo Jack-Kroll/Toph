@@ -80,6 +80,7 @@ Key choices:
 - The `anon` role has no table access. An unauthenticated request returns `permission denied`.
 - `dashboard_stats()` is `security invoker`, so it can only count rows the caller can already see.
 - `reset_demo_data()` is `security definer` so it can reseed the farm, but it verifies the caller is an admin of a demo farm first. Supabase's advisor flags this function; the flag is expected.
+- Demo recordings live under `demo/…`, readable by any signed-in user; `private.attach_demo_audio` links each seeded log to its file by employee and date.
 - Storage objects live under `<organization_id>/…`, and policies restrict reads, uploads, and deletes to that prefix. Playback uses short-lived signed URLs.
 - Anonymous users get the `authenticated` role, so the same RLS policies isolate each demo farm.
 - Only the publishable key reaches the browser. The database password and secret keys are never used by the app.
@@ -113,6 +114,14 @@ The seed reproduces the design's numbers from real rows rather than hard-coded v
 - Filtering and sorting are pure functions (`filters.ts`) with unit tests. They run on the client because a farm's monthly log volume is small and filters should respond instantly. If volume grows, the same filters move to PostgREST query parameters with pagination.
 - Tag removal updates the UI first and reloads if the request fails. Creates, edits, and deletes wait for the server, because the user needs to know the write actually succeeded.
 
+## Recordings and waveform
+
+Each seeded log points to an AAC file in the private `recordings` bucket. When a row expands, `useRecording` requests a one-hour signed URL, downloads the file, and decodes it with the Web Audio API. `computePeaks` reduces the samples to 98 bar heights (the design's bar count), so the waveform shows the actual speech and pauses. The same URL feeds an `<audio>` element, which drives the playhead, and clicking the waveform seeks. Decoded results are cached for the session, so reopening a row is instant.
+
+The files are about 70–210 KB, so decoding them in the browser is cheap. With long recordings, the peaks would be computed once at upload time and stored with the log instead.
+
+Logs without audio (for example, ones created in the dashboard) keep the design's static waveform, and Play reads the transcript with browser speech synthesis.
+
 ## UI decisions
 
 - The supplied screenshots are the visual source of truth, tuned for a 1440px desktop viewport, with narrower layouts down to phone width.
@@ -132,5 +141,5 @@ The seed reproduces the design's numbers from real rows rather than hard-coded v
 
 - End-to-end Playwright test covering login, editing, and persistence after refresh
 - Live satellite map with the recorded GPS point
-- Audio upload from the dashboard and a real waveform generated from the file
+- Audio upload from the dashboard, with peaks computed at upload time
 - Server-side pagination for large farms

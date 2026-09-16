@@ -11,7 +11,7 @@ Full-stack implementation of the Toph farm activity dashboard from the Fall 2026
 - Dashboard matching the supplied Figma default and expanded-entry frames
 - Metrics (Todays Recordings, New, Active Workers, Response Accuracy) calculated in Postgres
 - "New Employee Logs" inbox: unreviewed logs for the current month, with search, sort, activity filter, and a toggle to include reviewed logs
-- Expandable rows with playback, tags, transcript, product and rate applied, and a field map
+- Expandable rows with real recordings (private Storage, signed URLs), a waveform drawn from the audio with click-to-seek, tags, transcript, product and rate applied, and a field map
 - Create, edit, and delete logs; bulk mark reviewed, mark new, and delete from the row checkboxes
 - Tags saved per farm and reused across logs
 - Private demo per browser (Supabase anonymous sign-in), plus email/password accounts; each gets its own farm
@@ -75,14 +75,16 @@ src/
   types/database.ts                Generated database types
 supabase/
   migrations/                      Schema, RLS, seed function, storage, Realtime
+  demo-audio/                      Recordings uploaded to recordings/demo/
   tests/rls_check.sql              Rolled-back security and seed check
 tests/unit/                        Vitest tests
+scripts/generate-demo-audio.py     Rebuilds the demo recordings
 public/reference/                  Avatar and map images from the design
 ```
 
 ## Known limitations
 
-- No real recordings exist yet. When a log has no `audio_path`, **Play Recording** reads the transcript aloud with the browser's speech synthesis. Uploaded files in the private `recordings` bucket play through signed URLs.
+- Demo recordings are generated with macOS text-to-speech (`scripts/generate-demo-audio.py`), not real field recordings. Logs created in the dashboard have no audio, so **Play Recording** reads their transcript aloud instead.
 - The field map is the design's satellite image with the recorded coordinates listed underneath, not a live map.
 - Demo farms treat April 22, 2026 as "today" so the seeded numbers match the design. Farms without `demo_as_of` use the real date in their time zone.
 - Sidebar sections other than Dashboard are placeholders that show an "under construction" page.
