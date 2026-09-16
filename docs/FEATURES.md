@@ -28,6 +28,7 @@
 - [x] Live updates through Supabase Realtime
 - [x] Per-account demo farm with reset
 - [x] Bulk mark reviewed, mark new, and delete
+- [x] Routed sidebar with "under construction" pages for unfinished sections
 
 ## Deliberately out of scope
 

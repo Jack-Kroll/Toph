@@ -1,41 +1,8 @@
 import { useEffect, useState } from "react";
-import { Icon, type IconName } from "./Icon";
+import { NavLink } from "react-router";
+import { Icon } from "./Icon";
+import { NAV_GROUPS } from "../navigation";
 import type { Profile } from "../hooks/useDashboardData";
-
-const groups: { title: string; items: { label: string; icon: IconName }[] }[] =
-  [
-    {
-      title: "Overview",
-      items: [
-        { label: "Dashboard", icon: "dashboard" },
-        { label: "Activity Logs", icon: "audio" },
-        { label: "Map", icon: "map" },
-      ],
-    },
-    {
-      title: "Compliance",
-      items: [
-        { label: "Audit Manager", icon: "audit" },
-        { label: "Reports", icon: "reports" },
-        { label: "Schedule", icon: "calendar" },
-      ],
-    },
-    {
-      title: "Team Management",
-      items: [
-        { label: "Employees", icon: "users" },
-        { label: "Performance", icon: "performance" },
-        { label: "Messages", icon: "mail" },
-      ],
-    },
-    {
-      title: "Other",
-      items: [
-        { label: "Settings", icon: "settings" },
-        { label: "Support", icon: "support" },
-      ],
-    },
-  ];
 
 type Props = {
   profile: Profile | null;
@@ -115,33 +82,32 @@ export function Sidebar({
         )}
       </div>
       <nav>
-        {groups.map((group) => (
+        {NAV_GROUPS.map((group) => (
           <div className="nav-group" key={group.title}>
             <h2>{group.title}</h2>
-            {group.items.map((item) => {
-              const active = item.label === "Dashboard";
-              return (
-                <button
-                  key={item.label}
-                  aria-label={item.label}
-                  className={`nav-item ${active ? "active" : ""}`}
-                  aria-current={active ? "page" : undefined}
-                  aria-disabled={!active}
-                  title={active ? undefined : `${item.label} — coming soon`}
-                >
-                  <Icon name={item.icon} />
-                  <span>{item.label}</span>
-                  {active && newCount > 0 && (
-                    <span
-                      className="notification-count"
-                      aria-label={`${newCount} new today`}
-                    >
-                      {newCount}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+            {group.items.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                end
+                aria-label={item.label}
+                title={item.summary ? `${item.label} (coming soon)` : undefined}
+                className={({ isActive }) =>
+                  `nav-item ${isActive ? "active" : ""}`
+                }
+              >
+                <Icon name={item.icon} />
+                <span>{item.label}</span>
+                {item.path === "/" && newCount > 0 && (
+                  <span
+                    className="notification-count"
+                    aria-label={`${newCount} new today`}
+                  >
+                    {newCount}
+                  </span>
+                )}
+              </NavLink>
+            ))}
           </div>
         ))}
       </nav>

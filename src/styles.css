@@ -951,6 +951,68 @@ input[type="checkbox"]:checked:after {
     grid-template-columns: 1fr 1fr;
   }
 }
+a.nav-item {
+  color: inherit;
+  text-decoration: none;
+}
+a.nav-item:focus-visible,
+.construction-link:focus-visible {
+  outline: 2px solid #72b88c;
+  outline-offset: 2px;
+}
+.construction-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 560px;
+  margin: 28px auto 0;
+  padding: 28px 32px 32px;
+  border: 1px solid #ededed;
+  border-radius: 16px;
+}
+.construction-art {
+  display: block;
+  width: 100%;
+  max-width: 400px;
+  height: auto;
+  margin-bottom: 22px;
+}
+.construction-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  color: #9a5d12;
+  background: #fdf1db;
+}
+.construction-card h2 {
+  margin: 14px 0 8px;
+  font-size: 20px;
+  font-weight: 500;
+}
+.construction-card p {
+  margin: 0;
+  max-width: 400px;
+  font-size: 14px;
+  line-height: 20px;
+  color: #666;
+}
+.construction-card .construction-note {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #a0a0a0;
+}
+.construction-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 22px;
+  line-height: 36px;
+  text-decoration: none;
+}
 @media (min-width: 1600px) {
   .sidebar {
     width: 260px;

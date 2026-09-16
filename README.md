@@ -19,6 +19,7 @@ Full-stack implementation of the Toph farm activity dashboard from the Fall 2026
 - Live updates: logs added or changed elsewhere (for example by the mobile app) appear without a refresh
 - Reset demo data from the account menu (inbox icon beside the farm name)
 - Loading, empty, error, and success states
+- Real URLs for every sidebar section; unfinished sections show an illustrated "under construction" page
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the reasoning behind each decision.
 
@@ -26,7 +27,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the reasoning behind each decision.
 
 | Layer | Choice |
 | --- | --- |
-| Frontend | React 19, TypeScript, Vite, plain CSS |
+| Frontend | React 19, TypeScript, Vite, React Router, plain CSS |
 | Backend | Supabase: Postgres, Auth, Storage, Realtime |
 | Hosting | Netlify, deployed from `main` |
 | Tests | Vitest (unit) and a rolled-back SQL check for RLS |
@@ -63,9 +64,10 @@ In Supabase, **Confirm email** is off so reviewers can sign up and sign in immed
 
 ```text
 src/
-  App.tsx                          Auth gate: login page or dashboard
-  pages/                           LoginPage, DashboardPage
-  components/                      Sidebar, Modal/ConfirmDialog, Icon
+  App.tsx                          Auth gate and routes
+  navigation.ts                    Sidebar sections, paths, and descriptions
+  pages/                           Login, Dashboard, Under Construction
+  components/                      App layout, Sidebar, Modal/ConfirmDialog, Icon, illustration
   features/activity-logs/          API calls, filters, expanded row, log form
   hooks/                           Session and dashboard data (with Realtime)
   lib/                             Supabase client, time-zone helpers
@@ -82,4 +84,4 @@ public/reference/                  Avatar and map images from the design
 - No real recordings exist yet. When a log has no `audio_path`, **Play Recording** reads the transcript aloud with the browser's speech synthesis. Uploaded files in the private `recordings` bucket play through signed URLs.
 - The field map is the design's satellite image with the recorded coordinates listed underneath, not a live map.
 - Demo farms treat April 22, 2026 as "today" so the seeded numbers match the design. Farms without `demo_as_of` use the real date in their time zone.
-- Sidebar destinations other than Dashboard are intentionally disabled.
+- Sidebar sections other than Dashboard are placeholders that show an "under construction" page.

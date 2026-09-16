@@ -27,6 +27,10 @@ There is no custom API server. Row-level security in Postgres is the authorizati
 
 The dashboard is one interactive, signed-in screen. It has no public pages that need server rendering or SEO, so a Next.js-style server adds hosting complexity without benefit. Vite produces a static bundle that Netlify serves from its CDN. TypeScript, together with the generated `Database` types, catches schema drift at build time: renaming a column breaks the build instead of failing in production.
 
+### React Router
+
+Every sidebar section has its own URL, so refreshing, bookmarking, and the browser's Back button all work. The alternative, tracking the current page in React state, breaks all three. Netlify's SPA fallback in `netlify.toml` serves `index.html` for any path, and the router picks the page. The routes share one `AppLayout` that owns the sidebar, farm data, toasts, and the reset dialog, so moving between pages doesn't reload data. A section that isn't built yet shows an illustrated placeholder page; its description lives in `src/navigation.ts` next to the sidebar entry. The router, React, and Supabase are split into separately cached bundles.
+
 ### Plain CSS, no component library
 
 The brief grades pixel accuracy. The design's 8–14px type, custom pills, and waveform don't match any component library's defaults, and overriding a library costs more than writing the CSS directly. Tailwind was considered, but the design has many one-off measurements, which would become arbitrary-value utilities with no real advantage.
@@ -91,7 +95,7 @@ The seed reproduces the design's numbers from real rows rather than hard-coded v
 
 ## Frontend structure
 
-- `useSession` restores the session and gates the app between `LoginPage` and `DashboardPage`. The dashboard is keyed by user ID so switching accounts can't show stale data.
+- `useSession` restores the session and shows either `LoginPage` or the routed app. `AppLayout` is keyed by user ID so switching accounts can't show stale data.
 - `useDashboardData` loads profile, logs, stats, and form options in parallel, ignores responses from superseded requests, and refreshes when a Realtime event arrives for `activity_logs`.
 - `features/activity-logs/api.ts` is the only module that knows table and column names. It maps snake_case rows to UI types and turns PostgREST errors into exceptions.
 - Filtering and sorting are pure functions (`filters.ts`) with unit tests. They run on the client because a farm's monthly log volume is small and filters should respond instantly. If volume grows, the same filters move to PostgREST query parameters with pagination.
@@ -100,6 +104,7 @@ The seed reproduces the design's numbers from real rows rather than hard-coded v
 ## UI decisions
 
 - The supplied screenshots are the visual source of truth, tuned for a 1440px desktop viewport, with narrower layouts down to phone width.
+- Sidebar sections not in the design link to a placeholder page instead of doing nothing when clicked.
 - Additions beyond the design are deliberately small and reuse its visual language: the **New Log** pill, a bulk-action toolbar that replaces the filter pills when rows are checked, an **Edit** link beside "Summary", and one line for product, rate, and accuracy.
 - Arial matches the screenshot's letterforms and avoids loading a remote font.
 - The map and avatar are images cropped from the design. A live map (MapLibre with satellite tiles) is the next step; field and log coordinates are already stored.

@@ -1,10 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
+import { errorMessage as message, useLayout } from "../components/layoutContext";
 import { Icon } from "../components/Icon";
 import { ConfirmDialog, Modal } from "../components/Modal";
-import { Sidebar } from "../components/Sidebar";
-import { useDashboardData } from "../hooks/useDashboardData";
-import { supabase } from "../lib/supabase";
 import { formatDate, formatTimeRange } from "../lib/time";
 import * as api from "../features/activity-logs/api";
 import type { ActivityLog, LogInput } from "../features/activity-logs/api";
@@ -26,13 +23,8 @@ const SORT_OPTIONS: { label: string; key: SortKey; descending: boolean }[] = [
   { label: "Field, A–Z", key: "field", descending: false },
 ];
 
-type Toast = { message: string; tone: "success" | "error" };
-
-const message = (error: unknown) =>
-  error instanceof Error ? error.message : "Something went wrong.";
-
-export function DashboardPage({ session }: { session: Session }) {
-  const data = useDashboardData(session.user.id);
+export function DashboardPage() {
+  const { data, notify } = useLayout();
   const { profile, logs, setLogs, stats, loading, error, refresh } = data;
   const timeZone = profile?.organization.timezone ?? "America/Chicago";
 
@@ -47,23 +39,25 @@ export function DashboardPage({ session }: { session: Session }) {
   const [mapLog, setMapLog] = useState<ActivityLog | null>(null);
   const [editing, setEditing] = useState<ActivityLog | "new" | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string[] | null>(null);
-  const [confirmReset, setConfirmReset] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [toast, setToast] = useState<Toast | null>(null);
 
   useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(() => setToast(null), 3500);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMenu(null);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    document.title = "Dashboard · Toph";
   }, []);
+
+  // Menus stop click propagation, so any click that reaches the window is
+  // outside the open menu.
+  useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(null);
+    const onKey = (event: KeyboardEvent) => event.key === "Escape" && close();
+    window.addEventListener("click", close);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("click", close);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [menu]);
 
   const month = thisMonth && stats ? stats.asOf.slice(0, 7) : null;
   const visible = useMemo(
@@ -81,10 +75,6 @@ export function DashboardPage({ session }: { session: Session }) {
   const toReopen = selectedLogs.filter((log) => log.reviewedAt);
   const filtersActive =
     query !== "" || activity !== null || thisMonth || !includeReviewed;
-
-  function notify(text: string, tone: Toast["tone"] = "success") {
-    setToast({ message: text, tone });
-  }
 
   function toggleRow(id: string) {
     setExpanded(expanded === id ? null : id);
@@ -180,35 +170,11 @@ export function DashboardPage({ session }: { session: Session }) {
     }
   }
 
-  async function resetDemo() {
-    setBusy(true);
-    try {
-      await api.resetDemoData();
-      setExpanded(null);
-      setSelected([]);
-      setConfirmReset(false);
-      notify("Demo data restored.");
-      await refresh();
-    } catch (caught) {
-      notify(`Couldn't reset: ${message(caught)}`, "error");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   const metric = (value: number | null | undefined) =>
     loading && !stats ? "–" : (value ?? "–");
 
   return (
-    <div className="app-shell" onClick={() => menu && setMenu(null)}>
-      <Sidebar
-        profile={profile}
-        email={session.user.email ?? ""}
-        newCount={stats?.todaysNew ?? 0}
-        onSignOut={() => void supabase.auth.signOut()}
-        onResetDemo={() => setConfirmReset(true)}
-      />
-
+    <>
       <main className="main-content">
         <header className="page-header">
           <div>
@@ -627,23 +593,6 @@ export function DashboardPage({ session }: { session: Session }) {
           onCancel={() => setConfirmDelete(null)}
         />
       )}
-
-      {confirmReset && (
-        <ConfirmDialog
-          title="Reset demo data"
-          message="Restore the original Bays Ranch employees, fields, and logs? Your changes will be lost."
-          confirmLabel="Reset"
-          busy={busy}
-          onConfirm={() => void resetDemo()}
-          onCancel={() => setConfirmReset(false)}
-        />
-      )}
-
-      {toast && (
-        <div className={`toast ${toast.tone}`} role="status">
-          {toast.message}
-        </div>
-      )}
-    </div>
+    </>
   );
 }

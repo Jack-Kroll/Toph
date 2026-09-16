@@ -1,6 +1,9 @@
+import { BrowserRouter, Navigate, Route, Routes } from "react-router";
+import { AppLayout } from "./components/AppLayout";
 import { useSession } from "./hooks/useSession";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
+import { UnderConstructionPage } from "./pages/UnderConstructionPage";
 import "./styles.css";
 
 function App() {
@@ -10,8 +13,21 @@ function App() {
     return <div className="app-loading" aria-busy="true" />;
   }
   if (!session) return <LoginPage />;
-  // Keyed by user so switching accounts never shows the previous farm's data.
-  return <DashboardPage key={session.user.id} session={session} />;
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Keyed by user so switching accounts never shows the previous farm's data. */}
+        <Route
+          element={<AppLayout key={session.user.id} session={session} />}
+        >
+          <Route index element={<DashboardPage />} />
+          <Route path=":section" element={<UnderConstructionPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
 export default App;
