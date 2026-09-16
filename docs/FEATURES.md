@@ -14,7 +14,7 @@
 - [x] Create, edit, and delete activity logs
 - [x] Preserve changes after a page refresh
 - [x] Provide loading, empty, error, and success states
-- [ ] Verify the production Netlify deployment
+- [x] Verify the production Netlify deployment
 
 ## Above and beyond
 
@@ -27,7 +27,7 @@
 - [x] Document the database model and implementation tradeoffs
 - [x] Live updates through Supabase Realtime
 - [x] Per-account demo farm with reset
-- [x] Bulk mark-reviewed and delete
+- [x] Bulk mark reviewed, mark new, and delete
 
 ## Deliberately out of scope
 

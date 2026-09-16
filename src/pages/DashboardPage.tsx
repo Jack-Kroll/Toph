@@ -76,6 +76,9 @@ export function DashboardPage({ session }: { session: Session }) {
   );
   const visibleIds = new Set(visible.map((log) => log.id));
   const selectedVisible = selected.filter((id) => visibleIds.has(id));
+  const selectedLogs = visible.filter((log) => selected.includes(log.id));
+  const toReview = selectedLogs.filter((log) => !log.reviewedAt);
+  const toReopen = selectedLogs.filter((log) => log.reviewedAt);
   const filtersActive =
     query !== "" || activity !== null || thisMonth || !includeReviewed;
 
@@ -161,14 +164,15 @@ export function DashboardPage({ session }: { session: Session }) {
     }
   }
 
-  async function markReviewed(ids: string[]) {
+  async function setReviewed(ids: string[], reviewed: boolean) {
     try {
-      await api.markReviewed(ids);
+      await api.setReviewed(ids, reviewed);
       setSelected([]);
+      const state = reviewed ? "reviewed" : "new";
       notify(
         ids.length === 1
-          ? "Log marked as reviewed."
-          : `${ids.length} logs marked as reviewed.`,
+          ? `Log marked as ${state}.`
+          : `${ids.length} logs marked as ${state}.`,
       );
       await refresh();
     } catch (caught) {
@@ -277,13 +281,34 @@ export function DashboardPage({ session }: { session: Session }) {
                 <span className="selection-count">
                   {selectedVisible.length} selected
                 </span>
-                <button
-                  className="pill"
-                  onClick={() => void markReviewed(selectedVisible)}
-                >
-                  <Icon name="check" size={14} />
-                  Mark Reviewed
-                </button>
+                {toReview.length > 0 && (
+                  <button
+                    className="pill"
+                    onClick={() =>
+                      void setReviewed(
+                        toReview.map((log) => log.id),
+                        true,
+                      )
+                    }
+                  >
+                    <Icon name="check" size={14} />
+                    Mark Reviewed
+                  </button>
+                )}
+                {toReopen.length > 0 && (
+                  <button
+                    className="pill"
+                    onClick={() =>
+                      void setReviewed(
+                        toReopen.map((log) => log.id),
+                        false,
+                      )
+                    }
+                  >
+                    <Icon name="audio" size={14} />
+                    Mark New
+                  </button>
+                )}
                 <button
                   className="pill danger-pill"
                   onClick={() => setConfirmDelete(selectedVisible)}

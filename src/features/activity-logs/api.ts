@@ -185,13 +185,16 @@ export async function deleteLogs(ids: string[]) {
   check(await supabase.from("activity_logs").delete().in("id", ids));
 }
 
-export async function markReviewed(ids: string[]) {
+export async function setReviewed(ids: string[], reviewed: boolean) {
+  const query = supabase
+    .from("activity_logs")
+    .update({ reviewed_at: reviewed ? new Date().toISOString() : null })
+    .in("id", ids);
+  // Only touch rows whose state changes, so review times are preserved.
   check(
-    await supabase
-      .from("activity_logs")
-      .update({ reviewed_at: new Date().toISOString() })
-      .in("id", ids)
-      .is("reviewed_at", null),
+    await (reviewed
+      ? query.is("reviewed_at", null)
+      : query.not("reviewed_at", "is", null)),
   );
 }
 

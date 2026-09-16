@@ -12,7 +12,7 @@ Full-stack implementation of the Toph farm activity dashboard from the Fall 2026
 - Metrics (Todays Recordings, New, Active Workers, Response Accuracy) calculated in Postgres
 - "New Employee Logs" inbox: unreviewed logs for the current month, with search, sort, activity filter, and a toggle to include reviewed logs
 - Expandable rows with playback, tags, transcript, product and rate applied, and a field map
-- Create, edit, and delete logs; bulk mark-reviewed and bulk delete from the row checkboxes
+- Create, edit, and delete logs; bulk mark reviewed, mark new, and delete from the row checkboxes
 - Tags saved per farm and reused across logs
 - Email/password authentication, sign-up that creates a new farm, log out and switch user
 - Farm isolation with Postgres row-level security
