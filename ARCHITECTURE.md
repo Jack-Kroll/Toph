@@ -92,7 +92,10 @@ Key choices:
 
 ## Onboarding and demo data
 
-A trigger on `auth.users` creates a farm, an admin profile, and a copy of the design's data for every new account (`private.seed_demo_org`).
+A trigger on `auth.users` creates a farm and an admin profile for every new user.
+
+- **Demo sessions (anonymous users)** get the Bays Ranch sample data (`private.seed_demo_org`), its recordings, and `demo_as_of` so the numbers match the design.
+- **Email accounts** get an empty farm named from the sign-up form. Its `timezone` is the one the browser reports, checked against `pg_timezone_names`, so "today" is the farmer's today. They don't get sample data: a real farm shouldn't show made-up workers, and the demo already shows what a full farm looks like. The **New Log** form can add an employee or field inline, so an empty farm can record its first log without the unfinished Employees page. A new field takes the location pinned on the map.
 
 **Try the demo** uses Supabase anonymous sign-in. Each browser becomes its own anonymous user, so the same trigger gives it a private farm. The session is stored in that browser, so refreshing or returning later shows the same farm and edits. This replaced an earlier shared demo login, where every reviewer edited the same farm and saw each other's changes.
 

@@ -28,6 +28,7 @@
 - [x] Live updates through Supabase Realtime
 - [x] Private demo farm per browser (anonymous sign-in), with reset and automatic cleanup
 - [x] Bulk mark reviewed, mark new, and delete
+- [x] Empty farms for new accounts, with inline employee and field creation
 - [x] Routed sidebar with "under construction" pages for unfinished sections
 
 ## Deliberately out of scope

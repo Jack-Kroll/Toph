@@ -535,8 +535,13 @@ export function DashboardPage() {
                   <tr>
                     <td colSpan={7} className="empty-state">
                       {logs.length === 0
-                        ? "No logs yet. Create one to get started."
+                        ? "No logs yet. Recordings from your crew will show up here."
                         : "No logs match your filters."}
+                      {logs.length === 0 && profile && (
+                        <button onClick={() => setEditing("new")}>
+                          Create a log
+                        </button>
+                      )}
                       {logs.length > 0 && filtersActive && (
                         <button onClick={clearFilters}>
                           Show all logs

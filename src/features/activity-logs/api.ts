@@ -50,6 +50,9 @@ export type LogInput = {
   latitude: number | null;
   longitude: number | null;
   reviewed: boolean;
+  /** Set to create the employee or field along with the log. */
+  newEmployeeName: string | null;
+  newFieldName: string | null;
 };
 
 export type Option = { id: string; name: string };
@@ -150,6 +153,54 @@ export async function fetchOptions() {
   };
 }
 
+// 23505 is Postgres's unique-violation code.
+function friendlyInsertError(
+  error: { code: string; message: string },
+  label: string,
+) {
+  return new Error(
+    error.code === "23505"
+      ? `A ${label} with that name already exists.`
+      : error.message,
+  );
+}
+
+export async function createEmployee(fullName: string): Promise<Option> {
+  const { data, error } = await supabase
+    .from("employees")
+    .insert({ full_name: fullName })
+    .select("id, full_name")
+    .single();
+  if (error) throw friendlyInsertError(error, "employee");
+  return { id: data.id, name: data.full_name };
+}
+
+export async function createField(
+  name: string,
+  latitude: number | null,
+  longitude: number | null,
+): Promise<FieldOption> {
+  const { data, error } = await supabase
+    .from("fields")
+    .insert({ name, latitude, longitude })
+    .select("id, name, latitude, longitude")
+    .single();
+  if (error) throw friendlyInsertError(error, "field");
+  return data;
+}
+
+/** Creates any employee or field the form asked for and returns their ids. */
+async function resolveOptions(input: LogInput) {
+  const employeeId = input.newEmployeeName
+    ? (await createEmployee(input.newEmployeeName)).id
+    : input.employeeId;
+  const fieldId = input.newFieldName
+    ? (await createField(input.newFieldName, input.latitude, input.longitude))
+        .id
+    : input.fieldId;
+  return { ...input, employeeId, fieldId };
+}
+
 function toRow(input: LogInput) {
   return {
     employee_id: input.employeeId,
@@ -166,7 +217,8 @@ function toRow(input: LogInput) {
   };
 }
 
-export async function createLog(input: LogInput) {
+export async function createLog(form: LogInput) {
+  const input = await resolveOptions(form);
   check(
     await supabase.from("activity_logs").insert({
       ...toRow(input),
@@ -177,9 +229,10 @@ export async function createLog(input: LogInput) {
 
 export async function updateLog(
   id: string,
-  input: LogInput,
+  form: LogInput,
   previousReviewedAt: string | null,
 ) {
+  const input = await resolveOptions(form);
   // Keep the original review time when the reviewed state is unchanged.
   const reviewedAt = input.reviewed
     ? (previousReviewedAt ?? new Date().toISOString())

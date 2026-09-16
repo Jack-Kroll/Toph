@@ -50,7 +50,12 @@ export function LoginPage() {
           email,
           password,
           options: {
-            data: { full_name: fullName.trim(), farm_name: farmName.trim() },
+            data: {
+              full_name: fullName.trim(),
+              farm_name: farmName.trim(),
+              // The farm's "today" follows this zone; the server validates it.
+              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            },
           },
         });
         if (authError) throw authError;
@@ -78,7 +83,7 @@ export function LoginPage() {
         <h1>{signingUp ? "Create your farm" : "Welcome back"}</h1>
         <p className="auth-subtitle">
           {signingUp
-            ? "New farms start with sample employees, fields, and logs."
+            ? "Set up your farm. You'll add employees, fields, and logs as you go."
             : "Sign in to review your farm and employee activity."}
         </p>
 
@@ -115,7 +120,7 @@ export function LoginPage() {
                 <input
                   required
                   maxLength={120}
-                  placeholder="Bays Ranch"
+                  placeholder="e.g. Prairie Creek Farm"
                   value={farmName}
                   onChange={(event) => setFarmName(event.target.value)}
                 />

@@ -1331,3 +1331,32 @@ a.nav-item:focus-visible,
     flex-wrap: wrap;
   }
 }
+.form-stack {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+.form-stack > input {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #151515;
+}
+.form-stack > input:focus-visible {
+  outline: 2px solid #72b88c;
+  outline-offset: 0;
+  border-color: transparent;
+}
+.default-avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: #e9ecea;
+}
+.default-avatar svg {
+  fill: #a9b3ae;
+}

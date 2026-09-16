@@ -38,11 +38,21 @@ export function Sidebar({
   return (
     <aside className="sidebar" aria-label="Main navigation">
       <div className="account popover-anchor">
-        <img
-          className="avatar"
-          src="/reference/avatar.png"
-          alt={`${profile?.organization.name ?? "Farm"} profile`}
-        />
+        {profile?.organization.isDemo ? (
+          <img
+            className="avatar"
+            src="/reference/avatar.png"
+            alt={`${profile.organization.name} profile`}
+          />
+        ) : (
+          // Accounts have no photo yet; show a neutral placeholder.
+          <span className="avatar default-avatar" aria-hidden="true">
+            <svg viewBox="0 0 36 36" width="36" height="36">
+              <circle cx="18" cy="14" r="6" />
+              <path d="M6.5 31a11.5 11.5 0 0 1 23 0Z" />
+            </svg>
+          </span>
+        )}
         <div className="account-text">
           <strong>{profile?.organization.name ?? " "}</strong>
           <span>

@@ -4,7 +4,7 @@ Full-stack implementation of the Toph farm activity dashboard from the Fall 2026
 
 **Live site:** [tophwebsite.netlify.app](https://tophwebsite.netlify.app/)
 
-**Demo:** click **Try the demo** on the login page. Each browser gets its own private demo farm, so your edits are saved and nobody else sees them. You can also create an account with any email and password; every new account also gets its own copy of the demo data.
+**Demo:** click **Try the demo** on the login page. Each browser gets its own private demo farm, so your edits are saved and nobody else sees them. You can also create an account with any email and password. New accounts start with an empty farm and add employees and fields from the **New Log** form.
 
 ## Features
 
@@ -15,7 +15,8 @@ Full-stack implementation of the Toph farm activity dashboard from the Fall 2026
 - Live satellite maps for signed-up accounts, plus a location picker in the log form (click the map, use the field's location, or use your current location); the demo keeps the design's map image
 - Create, edit, and delete logs; bulk mark reviewed, mark new, and delete from the row checkboxes
 - Tags saved per farm and reused across logs
-- Private demo per browser (Supabase anonymous sign-in), plus email/password accounts; each gets its own farm
+- Private demo per browser (Supabase anonymous sign-in) with sample data, plus email/password accounts that start with an empty farm in the browser's time zone
+- Add a new employee or field right from the log form
 - Unused demo farms are deleted automatically after 14 days
 - Farm isolation with Postgres row-level security
 - Live updates: logs added or changed elsewhere (for example by the mobile app) appear without a refresh

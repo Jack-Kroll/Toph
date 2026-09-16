@@ -32,6 +32,11 @@ function fieldPoint(field: FieldOption | undefined): LatLng | null {
     : null;
 }
 
+// Select value that reveals a name box for a new employee or field.
+const NEW = "__new__";
+// Center of the contiguous US, for farms with no locations yet.
+const COUNTRY_VIEW: LatLng = { latitude: 39.5, longitude: -98.35 };
+
 const formatPoint = (point: LatLng) =>
   `${point.latitude.toFixed(5)}, ${point.longitude.toFixed(5)}`;
 
@@ -47,8 +52,10 @@ export function LogFormDialog({
   onClose,
 }: Props) {
   const [form, setForm] = useState({
-    employeeId: log?.employeeId ?? employees[0]?.id ?? "",
-    fieldId: log?.fieldId ?? fields[0]?.id ?? "",
+    employeeId: log?.employeeId ?? employees[0]?.id ?? NEW,
+    fieldId: log?.fieldId ?? fields[0]?.id ?? NEW,
+    newEmployeeName: "",
+    newFieldName: "",
     activity: log?.activity ?? ("Spraying" as ActivityType),
     date: log ? localDate(log.startedAt, timeZone) : defaultDate,
     start: log ? localTime(log.startedAt, timeZone) : "08:00",
@@ -97,6 +104,11 @@ export function LogFormDialog({
 
   function changeField(event: ChangeEvent<HTMLSelectElement>) {
     set("fieldId")(event);
+    // A new field takes whatever spot is pinned, so leave the pin alone.
+    if (event.target.value === NEW) {
+      setFollowField(false);
+      return;
+    }
     // Without a live map there is no way to pick, so always follow the field.
     if (followField || !liveMap) {
       moveTo(fieldPoint(fields.find((f) => f.id === event.target.value)), true);
@@ -144,12 +156,21 @@ export function LogFormDialog({
       setError("Application rate must be a positive number.");
       return;
     }
+    const newEmployeeName =
+      form.employeeId === NEW ? form.newEmployeeName.trim() : null;
+    const newFieldName = form.fieldId === NEW ? form.newFieldName.trim() : null;
+    if (newEmployeeName === "" || newFieldName === "") {
+      setError("Enter a name for the new employee or field.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
       await onSave({
         employeeId: form.employeeId,
         fieldId: form.fieldId,
+        newEmployeeName,
+        newFieldName,
         activity: form.activity,
         startedAt: zonedToIso(form.date, form.start, timeZone),
         endedAt: zonedToIso(form.date, form.end, timeZone),
@@ -170,11 +191,9 @@ export function LogFormDialog({
   const selectedField = fields.find((f) => f.id === form.fieldId);
   const selectedFieldPoint = fieldPoint(selectedField);
   // Something sensible to look at before any location exists.
-  const fallbackView = selectedFieldPoint ??
-    fields.map(fieldPoint).find(Boolean) ?? {
-      latitude: 41.21,
-      longitude: -96.62,
-    };
+  const nearbyView =
+    view ?? selectedFieldPoint ?? fields.map(fieldPoint).find(Boolean) ?? null;
+  const addingField = form.fieldId === NEW;
 
   return (
     <Modal
@@ -183,20 +202,34 @@ export function LogFormDialog({
       className="form-modal"
     >
       <form className="log-form" onSubmit={submit}>
-        <label>
-          Employee
-          <select
-            required
-            value={form.employeeId}
-            onChange={set("employeeId")}
-          >
-            {employees.map((employee) => (
-              <option key={employee.id} value={employee.id}>
-                {employee.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="form-stack">
+          <label>
+            Employee
+            <select
+              required
+              value={form.employeeId}
+              onChange={set("employeeId")}
+            >
+              {employees.map((employee) => (
+                <option key={employee.id} value={employee.id}>
+                  {employee.name}
+                </option>
+              ))}
+              <option value={NEW}>+ Add new employee…</option>
+            </select>
+          </label>
+          {form.employeeId === NEW && (
+            <input
+              required
+              autoFocus={employees.length > 0}
+              maxLength={120}
+              placeholder="Employee name"
+              aria-label="New employee name"
+              value={form.newEmployeeName}
+              onChange={set("newEmployeeName")}
+            />
+          )}
+        </div>
         <label>
           Activity
           <select value={form.activity} onChange={set("activity")}>
@@ -205,16 +238,29 @@ export function LogFormDialog({
             ))}
           </select>
         </label>
-        <label>
-          Field
-          <select required value={form.fieldId} onChange={changeField}>
-            {fields.map((field) => (
-              <option key={field.id} value={field.id}>
-                {field.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="form-stack">
+          <label>
+            Field
+            <select required value={form.fieldId} onChange={changeField}>
+              {fields.map((field) => (
+                <option key={field.id} value={field.id}>
+                  {field.name}
+                </option>
+              ))}
+              <option value={NEW}>+ Add new field…</option>
+            </select>
+          </label>
+          {addingField && (
+            <input
+              required
+              maxLength={60}
+              placeholder="Field name"
+              aria-label="New field name"
+              value={form.newFieldName}
+              onChange={set("newFieldName")}
+            />
+          )}
+        </div>
         <label>
           Date
           <input
@@ -269,15 +315,23 @@ export function LogFormDialog({
               <span>Location</span>
               <span className="location-coords">
                 {point
-                  ? `${formatPoint(point)}${followField ? " · field location" : ""}`
-                  : "Not set"}
+                  ? `${formatPoint(point)}${
+                      addingField
+                        ? " · saved as the new field's location"
+                        : followField
+                          ? " · field location"
+                          : ""
+                    }`
+                  : addingField
+                    ? "Click the map to place the new field"
+                    : "Not set"}
               </span>
             </div>
             <LazySatelliteMap
               className="picker-map"
-              center={view ?? fallbackView}
+              center={nearbyView ?? COUNTRY_VIEW}
               marker={point}
-              zoom={16}
+              zoom={nearbyView ? 16 : 4}
               onPick={(next) => {
                 setPoint(next);
                 setFollowField(false);
