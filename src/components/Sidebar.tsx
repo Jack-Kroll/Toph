@@ -6,7 +6,7 @@ import type { Profile } from "../hooks/useDashboardData";
 
 type Props = {
   profile: Profile | null;
-  email: string;
+  email: string | null;
   newCount: number;
   onSignOut: () => void;
   onResetDemo: () => void;
@@ -66,7 +66,9 @@ export function Sidebar({
             onClick={(event) => event.stopPropagation()}
           >
             <p>{profile?.fullName}</p>
-            <span className="account-email">{email}</span>
+            <span className="account-email">
+              {email ?? "Private demo in this browser"}
+            </span>
             {profile?.organization.isDemo && profile.role === "admin" && (
               <button
                 onClick={() => {
@@ -76,6 +78,12 @@ export function Sidebar({
               >
                 Reset demo data
               </button>
+            )}
+            {!email && (
+              <span className="account-hint">
+                Logging out ends this demo. Starting the demo again creates a
+                fresh farm.
+              </span>
             )}
             <button onClick={onSignOut}>Log out</button>
           </div>

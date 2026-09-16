@@ -910,6 +910,20 @@ input[type="checkbox"]:checked:after {
   width: 100%;
   height: 40px;
 }
+.demo-note {
+  margin: 8px 2px 0;
+  font-size: 11px;
+  line-height: 16px;
+  color: #9a9a9a;
+  text-align: center;
+}
+.account-hint {
+  display: block;
+  margin: -2px 8px 8px;
+  font-size: 11px;
+  line-height: 15px;
+  color: #a0a0a0;
+}
 .auth-divider {
   display: flex;
   align-items: center;

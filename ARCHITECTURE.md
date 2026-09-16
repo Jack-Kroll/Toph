@@ -11,7 +11,7 @@ Browser (React SPA on Netlify CDN)
   │  supabase-js with the publishable key + the user's JWT
   ▼
 Supabase
-  ├─ Auth        email/password sessions
+  ├─ Auth        anonymous demo sessions and email/password accounts
   ├─ PostgREST   tables and RPCs, filtered by row-level security
   ├─ Realtime    activity_logs changes, filtered by the same policies
   └─ Storage     private "recordings" bucket, per-farm folders
@@ -81,15 +81,27 @@ Key choices:
 - `dashboard_stats()` is `security invoker`, so it can only count rows the caller can already see.
 - `reset_demo_data()` is `security definer` so it can reseed the farm, but it verifies the caller is an admin of a demo farm first. Supabase's advisor flags this function; the flag is expected.
 - Storage objects live under `<organization_id>/…`, and policies restrict reads, uploads, and deletes to that prefix. Playback uses short-lived signed URLs.
+- Anonymous users get the `authenticated` role, so the same RLS policies isolate each demo farm.
 - Only the publishable key reaches the browser. The database password and secret keys are never used by the app.
 
 ## Onboarding and demo data
 
-A trigger on `auth.users` creates a farm, an admin profile, and a copy of the design's data for every new account (`private.seed_demo_org`). This has three benefits:
+A trigger on `auth.users` creates a farm, an admin profile, and a copy of the design's data for every new account (`private.seed_demo_org`).
 
-1. Reviewers can sign up and see a working dashboard immediately.
-2. Reviewers never overwrite each other's changes, because each one has their own copy.
+**Try the demo** uses Supabase anonymous sign-in. Each browser becomes its own anonymous user, so the same trigger gives it a private farm. The session is stored in that browser, so refreshing or returning later shows the same farm and edits. This replaced an earlier shared demo login, where every reviewer edited the same farm and saw each other's changes.
+
+Alternatives considered:
+
+- **A demo stored only in the browser** (localStorage). It would be truly local, but it would skip the database, which the brief requires, and the code paths reviewers tried wouldn't be the real ones.
+- **One shared demo account.** Simpler, but one reviewer's edits show up for everyone.
+
+Benefits of this approach:
+
+1. Reviewers see a working dashboard with one click, with no email or password.
+2. Nobody overwrites anyone else's changes.
 3. The seed lives in a migration, so it matches the schema exactly and can be reapplied with `reset_demo_data()`.
+
+Anonymous accounts accumulate, so a `pg_cron` job (`purge-stale-demo-accounts`, daily) deletes anonymous users with no session activity for 14 days, along with their farms. Supabase rate-limits anonymous sign-ins per IP, which caps abuse. Adding a CAPTCHA would be the next step for a public launch.
 
 The seed reproduces the design's numbers from real rows rather than hard-coded values. April 22 has 5 recordings, one of them unreviewed. The four unreviewed April logs are the four rows in the design. Twelve employees are active. April's accuracy averages exactly 90.
 

@@ -3,11 +3,6 @@ import type { FormEvent } from "react";
 import { Icon } from "../components/Icon";
 import { supabase } from "../lib/supabase";
 
-// Shared reviewer account; see README. Safe to ship: it only reaches its own
-// demo farm, and any user can reset that farm from the account menu.
-const DEMO_EMAIL = "demo@toph.farm";
-const DEMO_PASSWORD = "TophDemo2026!";
-
 export function LoginPage() {
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [email, setEmail] = useState("");
@@ -24,6 +19,22 @@ export function LoginPage() {
       password: secret,
     });
     if (authError) throw authError;
+  }
+
+  // Each browser gets its own anonymous account, and the signup trigger gives
+  // that account a private copy of the demo farm.
+  async function startDemo() {
+    setBusy(true);
+    setError(null);
+    const { error: authError } = await supabase.auth.signInAnonymously();
+    if (authError) {
+      setError(
+        authError.message.includes("disabled")
+          ? "The demo is unavailable right now. Please create an account instead."
+          : authError.message,
+      );
+      setBusy(false);
+    }
   }
 
   async function submit(event: FormEvent) {
@@ -53,17 +64,6 @@ export function LoginPage() {
     }
   }
 
-  async function signInDemo() {
-    setBusy(true);
-    setError(null);
-    try {
-      await signIn(DEMO_EMAIL, DEMO_PASSWORD);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Sign in failed.");
-      setBusy(false);
-    }
-  }
-
   const signingUp = mode === "sign-up";
 
   return (
@@ -85,11 +85,15 @@ export function LoginPage() {
         <button
           type="button"
           className="primary-button demo-button"
-          onClick={() => void signInDemo()}
+          onClick={() => void startDemo()}
           disabled={busy}
         >
-          Continue with demo account
+          Try the demo
         </button>
+        <p className="demo-note">
+          Opens a private demo farm in this browser. Your changes are saved, and
+          no one else sees them.
+        </p>
         <div className="auth-divider">
           <span>or</span>
         </div>

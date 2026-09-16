@@ -18,7 +18,7 @@
 
 ## Above and beyond
 
-- [x] Authenticate users and provide reviewer demo credentials
+- [x] Authenticate users and provide a one-click reviewer demo
 - [x] Isolate organization data with Postgres row-level security
 - [x] Add responsive behavior for smaller screens
 - [x] Add accessible keyboard and focus behavior
@@ -26,7 +26,7 @@
 - [ ] Add an end-to-end test covering login, editing, and refresh persistence
 - [x] Document the database model and implementation tradeoffs
 - [x] Live updates through Supabase Realtime
-- [x] Per-account demo farm with reset
+- [x] Private demo farm per browser (anonymous sign-in), with reset and automatic cleanup
 - [x] Bulk mark reviewed, mark new, and delete
 - [x] Routed sidebar with "under construction" pages for unfinished sections
 

@@ -47,7 +47,7 @@ export function AppLayout({ session }: { session: Session }) {
     <div className="app-shell">
       <Sidebar
         profile={data.profile}
-        email={session.user.email ?? ""}
+        email={session.user.is_anonymous ? null : (session.user.email ?? null)}
         newCount={data.stats?.todaysNew ?? 0}
         onSignOut={() => void supabase.auth.signOut()}
         onResetDemo={() => setConfirmReset(true)}

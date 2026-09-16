@@ -4,7 +4,7 @@ Full-stack implementation of the Toph farm activity dashboard from the Fall 2026
 
 **Live site:** [tophwebsite.netlify.app](https://tophwebsite.netlify.app/)
 
-**Demo login:** click **Continue with demo account**, or sign in with `demo@toph.farm` / `TophDemo2026!`. You can also create your own farm; every new account gets a private copy of the demo data.
+**Demo:** click **Try the demo** on the login page. Each browser gets its own private demo farm, so your edits are saved and nobody else sees them. You can also create an account with any email and password; every new account also gets its own copy of the demo data.
 
 ## Features
 
@@ -14,7 +14,8 @@ Full-stack implementation of the Toph farm activity dashboard from the Fall 2026
 - Expandable rows with playback, tags, transcript, product and rate applied, and a field map
 - Create, edit, and delete logs; bulk mark reviewed, mark new, and delete from the row checkboxes
 - Tags saved per farm and reused across logs
-- Email/password authentication, sign-up that creates a new farm, log out and switch user
+- Private demo per browser (Supabase anonymous sign-in), plus email/password accounts; each gets its own farm
+- Unused demo farms are deleted automatically after 14 days
 - Farm isolation with Postgres row-level security
 - Live updates: logs added or changed elsewhere (for example by the mobile app) appear without a refresh
 - Reset demo data from the account menu (inbox icon beside the farm name)
@@ -58,7 +59,7 @@ Database commands need `npx supabase login` and `npx supabase link --project-ref
 
 Netlify builds with the settings in `netlify.toml` (`npm run build`, publish `dist`, Node 24, SPA fallback). Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` under **Site configuration → Environment variables**. The publishable key is designed to be public; the database password and secret keys are never used by the app or committed.
 
-In Supabase, **Confirm email** is off so reviewers can sign up and sign in immediately.
+In Supabase, **Allow anonymous sign-ins** is on (for the demo) and **Confirm email** is off (so new accounts can sign in immediately).
 
 ## Project structure
 
