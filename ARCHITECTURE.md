@@ -84,6 +84,11 @@ Key choices:
 - Storage objects live under `<organization_id>/…`, and policies restrict reads, uploads, and deletes to that prefix. Playback uses short-lived signed URLs.
 - Anonymous users get the `authenticated` role, so the same RLS policies isolate each demo farm.
 - Only the publishable key reaches the browser. The database password and secret keys are never used by the app.
+- Supabase's advisors (`npx supabase db advisors --linked`) report no errors. The remaining warnings are intended:
+  - `reset_demo_data` is callable by signed-in users and checks for an admin itself.
+  - Each RLS policy applies to anonymous users, which the private demo relies on; the policies still scope them to their own farm.
+  - Leaked-password protection (HaveIBeenPwned) is a paid-plan setting and isn't available on the free plan.
+- Foreign keys the advisor flagged as unindexed are now covered by indexes.
 
 ## Onboarding and demo data
 
