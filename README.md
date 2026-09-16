@@ -4,7 +4,11 @@ Full-stack implementation of the Toph farm activity dashboard from the Fall 2026
 
 ## Status
 
-The repository is scaffolded but the product features have not been implemented yet.
+The dashboard UI matches the supplied default and expanded-entry references. It uses local sample data; backend integration is still pending.
+
+Implemented: expandable employee logs, search, date sorting, activity filtering, row selection, session-only tags, and an expanded map dialog. The map and profile photo are cropped from the supplied design screenshots. Playback is a browser-synthesized reading of the sample transcript, not an original recording. Sidebar destinations outside the dashboard are disabled.
+
+Run `npm run build` and `npm run lint` to verify the frontend.
 
 ## Planned stack
 
@@ -36,21 +40,14 @@ Add the values from `.env.example` in Netlify under **Project configuration > En
 
 ```text
 src/
-  components/          Shared UI components
-  features/            Feature-specific UI and logic
-    activity-logs/     Dashboard activity-log feature
-  layouts/             Application shell and navigation
-  lib/                 Service clients and shared utilities
-  pages/               Route-level page components
-  routes/              Routing and access control
-  styles/              Shared styles and design tokens
-  types/               Shared TypeScript types
-supabase/
-  migrations/          Versioned database migrations
-  seed.sql             Development and demo data
-tests/
-  e2e/                 Browser-level tests
-  unit/                Unit and component tests
+  App.tsx               Dashboard UI and local interactions
+  App.css               Dashboard layout and responsive styles
+  index.css             Global styles
+  main.tsx              Application entry point
+public/reference/       Design reference assets used by the UI
+docs/FEATURES.md        Implementation checklist
+ARCHITECTURE.md         Scope and technical decisions
+netlify.toml            Netlify build configuration
 ```
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the planned technical decisions and [docs/FEATURES.md](docs/FEATURES.md) for the implementation checklist.

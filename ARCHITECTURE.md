@@ -6,6 +6,15 @@ Toph is a focused implementation of the supplied dashboard design, including its
 
 The dashboard is expected to support authentication, persistent activity records, calculated summary metrics, search and filtering, expandable rows, audio playback, maps, and persistent tags.
 
+## UI decisions
+
+- The supplied screenshots are the visual source of truth for desktop proportions, text, row content, borders, and colors. The dashboard is tuned for a 1440px desktop viewport and adapts to narrower screens.
+- Plain CSS gives direct control over the reference's small spacing and typography differences. No component framework or styling dependency is needed for this focused screen.
+- Arial matches the supplied screenshot's letterforms closely and avoids a remote font-loading dependency.
+- The map and profile photo are cropped reference assets. A larger map dialog demonstrates expansion; live map services are deferred.
+- State is local to React and resets on refresh. Statistics are fixed reference values. Audio playback uses the browser's speech synthesis as a demonstrator because no recording was supplied.
+- Icons are small inline SVGs. Reduced motion, keyboard focus, labeled controls, and narrow-screen table scrolling are included.
+
 ## Technical decisions
 
 ### React, TypeScript, and Vite

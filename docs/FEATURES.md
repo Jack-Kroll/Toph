@@ -2,14 +2,14 @@
 
 ## Submission-critical
 
-- [ ] Match the supplied dashboard layout and visual states
+- [x] Match the supplied dashboard layout and visual states
 - [ ] Display database-backed summary metrics
 - [ ] Display persistent employee activity logs
-- [ ] Search, sort, and filter activity logs
-- [ ] Expand and collapse an activity-log row
+- [x] Search, sort, and filter activity logs (local sample data)
+- [x] Expand and collapse an activity-log row
 - [ ] Play the recording associated with a log
-- [ ] Display the transcript and summary
-- [ ] Display the field location on a map
+- [x] Display the transcript and summary
+- [x] Display the field location on a map (reference image and expansion dialog)
 - [ ] Add and remove persistent tags
 - [ ] Create, edit, and delete activity logs
 - [ ] Preserve changes after a page refresh
