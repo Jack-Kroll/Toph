@@ -73,6 +73,7 @@ export type Database = {
           organization_id: string
           product_name: string | null
           rate_unit: string | null
+          recorded_values: Json | null
           response_accuracy: number | null
           reviewed_at: string | null
           started_at: string
@@ -94,6 +95,7 @@ export type Database = {
           organization_id?: string
           product_name?: string | null
           rate_unit?: string | null
+          recorded_values?: Json | null
           response_accuracy?: number | null
           reviewed_at?: string | null
           started_at: string
@@ -115,6 +117,7 @@ export type Database = {
           organization_id?: string
           product_name?: string | null
           rate_unit?: string | null
+          recorded_values?: Json | null
           response_accuracy?: number | null
           reviewed_at?: string | null
           started_at?: string

@@ -64,6 +64,11 @@ describe("time helpers", () => {
     expect(localTime(iso, TZ)).toBe("23:30");
   });
 
+  it("rejects nonexistent spring-forward times instead of shifting the log", () => {
+    expect(() => zonedToIso("2026-03-08", "02:30", TZ)).toThrow("clocks change");
+    expect(localTime(zonedToIso("2026-03-08", "03:30", TZ), TZ)).toBe("03:30");
+  });
+
   it("formats like the design", () => {
     expect(formatDate("2026-04-19T11:00:00Z", TZ)).toBe("April 19, 2026");
     expect(

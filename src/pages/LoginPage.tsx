@@ -26,13 +26,20 @@ export function LoginPage() {
   async function startDemo() {
     setBusy(true);
     setError(null);
-    const { error: authError } = await supabase.auth.signInAnonymously();
-    if (authError) {
+    try {
+      const { error: authError } = await supabase.auth.signInAnonymously();
+      if (authError) throw authError;
+    } catch (caught) {
+      const message =
+        caught instanceof Error
+          ? caught.message
+          : "Couldn't open the demo. Please try again.";
       setError(
-        authError.message.includes("disabled")
+        message.includes("disabled")
           ? "The demo is unavailable right now. Please create an account instead."
-          : authError.message,
+          : message,
       );
+    } finally {
       setBusy(false);
     }
   }
@@ -44,10 +51,10 @@ export function LoginPage() {
     setNotice(null);
     try {
       if (mode === "sign-in") {
-        await signIn(email, password);
+        await signIn(email.trim(), password);
       } else {
         const { data, error: authError } = await supabase.auth.signUp({
-          email,
+          email: email.trim(),
           password,
           options: {
             data: {
@@ -100,8 +107,7 @@ export function LoginPage() {
           Try the demo
         </button>
         <p className="demo-note">
-          Opens a private demo farm in this browser. Your changes are saved, and
-          no one else sees them.
+          Opens a private demo farm in this browser. Your changes are saved.
         </p>
         <div className="auth-divider">
           <span>or</span>

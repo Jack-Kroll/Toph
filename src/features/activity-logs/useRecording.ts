@@ -1,73 +1,71 @@
 import { useEffect, useState } from "react";
 import { recordingUrl } from "./api";
-
-export const BAR_COUNT = 98;
+import { computePeaks } from "./audioSamples";
+export { BAR_COUNT, computePeaks } from "./audioSamples";
 
 type Recording = { url: string; peaks: number[] };
-
-// Decoded once per file for the session; re-expanding a row is instant.
-const cache = new Map<string, Promise<Recording>>();
-
-/** Loudest sample in each of BAR_COUNT slices, scaled so the peak is 1. */
-export function computePeaks(samples: Float32Array, count = BAR_COUNT) {
-  const size = Math.max(1, Math.floor(samples.length / count));
-  const peaks = Array.from({ length: count }, (_, bar) => {
-    let max = 0;
-    const end = Math.min(samples.length, (bar + 1) * size);
-    for (let i = bar * size; i < end; i++) {
-      const value = Math.abs(samples[i]);
-      if (value > max) max = value;
-    }
-    return max;
-  });
-  const loudest = Math.max(...peaks) || 1;
-  return peaks.map((peak) => peak / loudest);
-}
-
-async function load(path: string): Promise<Recording> {
-  // Signed URLs last an hour; the cache is dropped with the page long before
-  // most sessions reach that, and playback errors fall back to a refetch.
-  const url = await recordingUrl(path);
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Recording unavailable (${response.status})`);
-  const context = new AudioContext();
-  try {
-    const audio = await context.decodeAudioData(await response.arrayBuffer());
-    return { url, peaks: computePeaks(audio.getChannelData(0)) };
-  } finally {
-    void context.close();
-  }
-}
-
 export function useRecording(path: string | null) {
+  const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<{
-    path: string | null;
-    recording: Recording | null;
-    failed: boolean;
-  }>({ path: null, recording: null, failed: false });
-
+    key: string;
+    recording?: Recording;
+    error?: string;
+  }>({ key: "" });
+  const key = JSON.stringify([path, attempt]);
   useEffect(() => {
     if (!path) return;
     let active = true;
-    let request = cache.get(path);
-    if (!request) {
-      request = load(path);
-      cache.set(path, request);
-      request.catch(() => cache.delete(path));
+    let url: string | undefined;
+    const controller = new AbortController();
+    async function load() {
+      const response = await fetch(await recordingUrl(path!), {
+        signal: controller.signal,
+      });
+      if (!response.ok)
+        throw new Error("The recording couldn't be loaded. Please retry.");
+      const blob = await response.blob();
+      let context: AudioContext | undefined;
+      let peaks: number[] = [];
+      try {
+        context = new AudioContext();
+        const audio = await context.decodeAudioData(await blob.arrayBuffer());
+        const samples = new Float32Array(audio.length);
+        for (let channel = 0; channel < audio.numberOfChannels; channel++) {
+          const data = audio.getChannelData(channel);
+          for (let i = 0; i < samples.length; i++)
+            samples[i] = Math.max(samples[i], Math.abs(data[i]));
+        }
+        peaks = computePeaks(samples);
+      } catch {
+        // A waveform decoding failure must not prevent normal media playback.
+      } finally {
+        void context?.close();
+      }
+      if (!active) return;
+      url = URL.createObjectURL(blob);
+      setState({ key, recording: { url, peaks } });
     }
-    request.then(
-      (recording) => active && setState({ path, recording, failed: false }),
-      () => active && setState({ path, recording: null, failed: true }),
-    );
+    void load().catch((error) => {
+      if (active)
+        setState({
+          key,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Couldn't load the recording.",
+        });
+    });
     return () => {
       active = false;
+      controller.abort();
+      if (url) URL.revokeObjectURL(url);
     };
-  }, [path]);
-
-  const current = state.path === path ? state : null;
+  }, [key, path]);
+  const current = state.key === key ? state : undefined;
   return {
     recording: current?.recording ?? null,
     loading: Boolean(path) && !current,
-    failed: current?.failed ?? false,
+    error: current?.error,
+    prepare: () => setAttempt((value) => value + 1),
   };
 }

@@ -2,7 +2,7 @@
 
 ## Scope
 
-Toph is a focused implementation of the supplied dashboard, in both its default and expanded-entry states, backed by a real database. It does not implement the other products in the sidebar or the mobile recording app. The data model and API assume a mobile app writes logs, and the dashboard updates live when it does.
+Toph is a focused implementation of the supplied dashboard, in both its default and expanded-entry states, backed by a real database. The data model and API assume a mobile app writes logs, and the dashboard updates live when it does.
 
 ## Request flow
 
@@ -29,7 +29,7 @@ The dashboard is one interactive, signed-in screen. It has no public pages that 
 
 ### React Router
 
-Every sidebar section has its own URL, so refreshing, bookmarking, and the browser's Back button all work. The alternative, tracking the current page in React state, breaks all three. Netlify's SPA fallback in `netlify.toml` serves `index.html` for any path, and the router picks the page. The routes share one `AppLayout` that owns the sidebar, farm data, toasts, and the reset dialog, so moving between pages doesn't reload data. A section that isn't built yet shows an illustrated placeholder page; its description lives in `src/navigation.ts` next to the sidebar entry. The router, React, and Supabase are split into separately cached bundles.
+Every sidebar section has its own URL, so refreshing, bookmarking, and the browser's Back button all work. The alternative, tracking the current page in React state, breaks all three. Netlify's SPA fallback in `netlify.toml` serves `index.html` for any path, and the router picks the page. The routes share one `AppLayout` that owns the sidebar, farm data, toasts, and the reset dialog, so moving between pages doesn't reload data. Route labels and descriptions live in `src/navigation.ts` next to the sidebar entries. The router, React, and Supabase are split into separately cached bundles.
 
 ### Plain CSS, no component library
 
@@ -70,6 +70,7 @@ Key choices:
 - **Composite foreign keys** `(organization_id, employee_id)` → `employees(organization_id, id)`. RLS limits what a user can *see*, but a plain foreign key would still accept an employee ID from another farm. The composite key makes that impossible in the database itself.
 - **`timestamptz` plus a farm time zone** instead of separate date and time columns. Shifts can cross midnight, and the dashboard has to agree with the farm about which day "today" is, whichever time zone the viewer is in. `src/lib/time.ts` converts through the farm's IANA zone, and its tests cover DST.
 - **`reviewed_at` instead of a status enum.** "New Employee Logs" means unreviewed logs. A timestamp answers both "is it new?" and "when was it reviewed?". The sidebar badge and "1 New" count come from the same column.
+- **Response accuracy is scored on review.** The recording app stores what it captured in `recorded_values`; a log inserted without one (today, every log entered in the dashboard) records its own values, and one inserted already reviewed scores 100. When a log is reviewed, or a reviewed log is edited, a trigger sets `response_accuracy` to the share of the seven structured fields (activity, field, start, end, product, rate, unit) that still match. Times are compared to the minute and text is trimmed, matching what the edit form saves. Column grants stop clients from writing the score or changing the recording. Seeded demo logs count as recordings but keep their preset scores until they're reviewed, so the demo starts at the design's 90%.
 - **Check constraints** on activity type, accuracy (0–100), non-negative rates, coordinate ranges, and `ended_at >= started_at`, so bad data is rejected even if it bypasses the UI (for example, from the mobile app).
 - **Indexes** on `(organization_id, started_at desc)` and on the foreign keys, matching the dashboard's query pattern.
 
@@ -95,7 +96,7 @@ Key choices:
 A trigger on `auth.users` creates a farm and an admin profile for every new user.
 
 - **Demo sessions (anonymous users)** get the Bays Ranch sample data (`private.seed_demo_org`), its recordings, and `demo_as_of` so the numbers match the design.
-- **Email accounts** get an empty farm named from the sign-up form. Its `timezone` is the one the browser reports, checked against `pg_timezone_names`, so "today" is the farmer's today. They don't get sample data: a real farm shouldn't show made-up workers, and the demo already shows what a full farm looks like. The **New Log** form can add an employee or field inline, so an empty farm can record its first log without the unfinished Employees page. A new field takes the location pinned on the map.
+- **Email accounts** get an empty farm named from the sign-up form. Its `timezone` is the one the browser reports, checked against `pg_timezone_names`, so "today" is the farmer's today. They don't get sample data: a real farm shouldn't show made-up workers, and the demo already shows what a full farm looks like. The **New Log** form can add an employee or field inline, so an empty farm can record its first log in one place. A new field takes the location pinned on the map.
 
 **Try the demo** uses Supabase anonymous sign-in. Each browser becomes its own anonymous user, so the same trigger gives it a private farm. The session is stored in that browser, so refreshing or returning later shows the same farm and edits. This replaced an earlier shared demo login, where every reviewer edited the same farm and saw each other's changes.
 
@@ -124,11 +125,11 @@ The seed reproduces the design's numbers from real rows rather than hard-coded v
 
 ## Recordings and waveform
 
-Each seeded log points to an AAC file in the private `recordings` bucket. When a row expands, `useRecording` requests a one-hour signed URL, downloads the file, and decodes it with the Web Audio API. `computePeaks` reduces the samples to 98 bar heights (the design's bar count), so the waveform shows the actual speech and pauses. The same URL feeds an `<audio>` element, which drives the playhead, and clicking the waveform seeks. Decoded results are cached for the session, so reopening a row is instant.
+Uploaded recordings are fetched through a fresh signed URL, decoded, and played from a local Blob URL. This avoids retaining expired URLs. Blob URLs are released on unmount or source changes, and playback errors are visible with a retry action. Peaks include every sample and all channels.
 
-The files are about 70–210 KB, so decoding them in the browser is cheap. With long recordings, the peaks would be computed once at upload time and stored with the log instead.
+Demo and dashboard-created transcripts use browser speech synthesis. Questions use a consistent English narrator; answers select another installed voice by a stable employee-ID hash. A single-voice device uses a pitch distinction. Short utterances are kept alive, pause/resume preserves playback position, callbacks after cancellation are ignored, and natural completion does not call cancel. Failed starts surface a retry message. The application cannot inspect or smooth OS-generated audio samples, so transcript reading displays the original Figma waveform as a decorative element, without seeking or an estimated playhead. There are no downloaded models or additional speech dependencies.
 
-Logs without audio (for example, ones created in the dashboard) keep the design's static waveform, and Play reads the transcript with browser speech synthesis.
+Guided transcripts remain text in the database for compatibility. A shared parser/serializer drives the question-and-answer form, summary, and voice segments; existing free text stays intact until edited. Legacy single-voice demo files are bypassed for transcript reading. Uploaded recordings still use their original audio and a real waveform; a waveform decode failure does not block playback.
 
 ## Maps
 
@@ -149,16 +150,15 @@ Demo sessions show the design's map image, matching the Figma. Email accounts ge
 - **Farm name and time zone** are the only organization columns users can update, and a policy limits that to the farm's admins. A trigger rejects time zones Postgres doesn't know, because a check constraint can't query the catalog.
 - **Account deletion** is `delete_my_account()`, a `security definer` function, because deleting from `auth.users` needs more privilege than the browser has.
   - It deletes the user and, if nobody else belongs to the farm, the farm and all its data.
-  - The client first removes the user's photos and the farm's recordings through the Storage API. Storage files can't be safely deleted with SQL.
+  - The client first removes the user's photos and, for a sole member, the farm's recordings through the Storage API. Storage files can't be safely deleted with SQL.
   - The confirmation requires typing DELETE, since the action can't be undone.
 
 ## UI decisions
 
 - The supplied screenshots are the visual source of truth, tuned for a 1440px desktop viewport, with narrower layouts down to phone width.
-- Sidebar sections not in the design link to a placeholder page instead of doing nothing when clicked.
 - Additions beyond the design are deliberately small and reuse its visual language: the **New Log** pill, a bulk-action toolbar that replaces the filter pills when rows are checked, an **Edit** link beside "Summary", and one line for product, rate, and accuracy.
 - Arial matches the screenshot's letterforms and avoids loading a remote font.
-- The map and avatar are images cropped from the design. A live map (MapLibre with satellite tiles) is the next step; field and log coordinates are already stored.
+- The demo map and avatar are images cropped from the design; account maps use Leaflet satellite tiles.
 - Includes keyboard focus styles, Escape to close menus and dialogs, labeled icon buttons, `role="alert"`/`status` for feedback, and reduced-motion support.
 
 ## Testing
@@ -167,8 +167,5 @@ Demo sessions show the design's map image, matching the Figma. Email accounts ge
 - `npm run db:test`: creates two users inside a transaction that is rolled back. It checks farm isolation, the seeded stats (`5 / 1 / 12 / 90`), that the organization-hopping attack is blocked, and that reset works.
 - Manual browser check: demo login; add a tag and refresh; create, review, and delete a log; reset demo data; open the map.
 
-## Next steps
 
-- End-to-end Playwright test covering login, editing, and persistence after refresh
-- Audio upload from the dashboard, with peaks computed at upload time
-- Server-side pagination for large farms
+Settings uses a short common time-zone list and retains the current farm/browser zones. Its employee list uses the complete log history, so deleting a worker's last log hides that worker without destroying a reusable employee record. Log reads are paginated to avoid PostgREST's per-response row limit.

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { Icon } from "./Icon";
 
@@ -10,9 +10,52 @@ type Props = {
 };
 
 export function Modal({ title, onClose, className = "", children }: Props) {
+  const dialog = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const previous =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    if (!dialog.current?.contains(document.activeElement))
+      dialog.current?.focus();
+    return () => {
+      document.body.style.overflow = overflow;
+      if (previous?.isConnected) previous.focus();
+    };
+  }, []);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      // A confirmation can sit above the edit form; only the top dialog reacts.
+      const dialogs = document.querySelectorAll('[role="dialog"]');
+      if (dialogs[dialogs.length - 1] !== dialog.current) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+      }
+      if (event.key !== "Tab") return;
+      const focusable = Array.from(
+        dialog.current!.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]',
+        ),
+      ).filter((element) => element.getClientRects().length > 0);
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (!first) {
+        event.preventDefault();
+        dialog.current?.focus();
+      } else if (
+        event.shiftKey &&
+        (document.activeElement === first ||
+          document.activeElement === dialog.current)
+      ) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -21,6 +64,8 @@ export function Modal({ title, onClose, className = "", children }: Props) {
   return (
     <div className="modal-backdrop" onMouseDown={onClose}>
       <div
+        ref={dialog}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -62,10 +107,16 @@ export function ConfirmDialog({
   onCancel,
 }: ConfirmProps) {
   return (
-    <Modal title={title} onClose={onCancel} className="confirm-modal">
+    <Modal
+      title={title}
+      onClose={() => {
+        if (!busy) onCancel();
+      }}
+      className="confirm-modal"
+    >
       <p className="modal-message">{message}</p>
       <div className="form-actions">
-        <button className="secondary-button" onClick={onCancel}>
+        <button className="secondary-button" disabled={busy} onClick={onCancel}>
           Cancel
         </button>
         <button

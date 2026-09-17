@@ -56,6 +56,8 @@ export type LogInput = {
 };
 
 export type Option = { id: string; name: string };
+/** Inactive employees stay on their old logs but aren't offered for new ones. */
+export type EmployeeOption = Option & { active: boolean };
 export type FieldOption = Option & {
   latitude: number | null;
   longitude: number | null;
@@ -92,12 +94,23 @@ const LOG_COLUMNS = `
 `;
 
 export async function fetchLogs(): Promise<ActivityLog[]> {
-  const rows = unwrap(
-    await supabase
+  // PostgREST caps each response; read all pages so filters and employee
+  // visibility still use the full history on larger farms.
+  const pageSize = 1000;
+  const readPage = (offset: number) =>
+    supabase
       .from("activity_logs")
       .select(LOG_COLUMNS)
-      .order("created_at", { ascending: false }),
-  );
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(offset, offset + pageSize - 1);
+  const rows = unwrap(await readPage(0));
+  let pageLength = rows.length;
+  while (pageLength === pageSize) {
+    const page = unwrap(await readPage(rows.length));
+    pageLength = page.length;
+    rows.push(...page);
+  }
   return rows.map((row) => ({
     id: row.id,
     employeeId: row.employee_id,
@@ -139,8 +152,7 @@ export async function fetchOptions() {
   const [employees, fields] = await Promise.all([
     supabase
       .from("employees")
-      .select("id, full_name")
-      .eq("is_active", true)
+      .select("id, full_name, is_active")
       .order("full_name"),
     supabase
       .from("fields")
@@ -148,7 +160,11 @@ export async function fetchOptions() {
       .order("name"),
   ]);
   return {
-    employees: unwrap(employees).map((e) => ({ id: e.id, name: e.full_name })),
+    employees: unwrap(employees).map((e): EmployeeOption => ({
+      id: e.id,
+      name: e.full_name,
+      active: e.is_active,
+    })),
     fields: unwrap(fields) as FieldOption[],
   };
 }

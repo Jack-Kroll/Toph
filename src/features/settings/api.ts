@@ -12,13 +12,18 @@ async function toSquareImage(file: File): Promise<Blob> {
   try {
     bitmap = await createImageBitmap(file);
   } catch {
-    throw new Error("That file isn't an image this browser can read. Try a JPG, PNG, or WebP.");
+    throw new Error(
+      "That file isn't an image this browser can read. Try a JPG, PNG, or WebP.",
+    );
   }
   const side = Math.min(bitmap.width, bitmap.height);
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = AVATAR_SIZE;
   const context = canvas.getContext("2d");
-  if (!context) throw new Error("Couldn't process the image.");
+  if (!context) {
+    bitmap.close();
+    throw new Error("Couldn't process the image.");
+  }
   context.drawImage(
     bitmap,
     (bitmap.width - side) / 2,
@@ -62,7 +67,8 @@ export async function uploadAvatar(
     await supabase.storage.from("avatars").remove([path]);
     throw new Error(error.message);
   }
-  if (previousPath) await supabase.storage.from("avatars").remove([previousPath]);
+  if (previousPath)
+    await supabase.storage.from("avatars").remove([previousPath]);
 }
 
 export async function removeAvatar(userId: string, path: string) {
@@ -94,17 +100,36 @@ export async function updateFarm(
     .select("id");
   if (error) throw new Error(error.message);
   // RLS filters instead of erroring, so an empty result means no permission.
-  if (data.length === 0) throw new Error("Only farm admins can change these settings.");
+  if (data.length === 0)
+    throw new Error("Only farm admins can change these settings.");
+}
+
+export async function setEmployeeActive(id: string, active: boolean) {
+  const { error } = await supabase
+    .from("employees")
+    .update({ is_active: active })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
 }
 
 async function removeFolder(bucket: string, folder: string) {
-  const { data, error } = await supabase.storage
-    .from(bucket)
-    .list(folder, { limit: 1000 });
-  if (error || !data.length) return;
-  await supabase.storage
-    .from(bucket)
-    .remove(data.map((file) => `${folder}/${file.name}`));
+  // Delete one page at a time; using an offset would skip files as they vanish.
+  while (true) {
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .list(folder, { limit: 1000 });
+    if (error) throw new Error(error.message);
+    if (!data.length) return;
+    const files = data.filter((file) => file.id);
+    if (!files.length)
+      throw new Error(
+        "The storage folder contains subfolders that need to be removed first.",
+      );
+    const result = await supabase.storage
+      .from(bucket)
+      .remove(files.map((file) => `${folder}/${file.name}`));
+    if (result.error) throw new Error(result.error.message);
+  }
 }
 
 /**
@@ -112,8 +137,15 @@ async function removeFolder(bucket: string, folder: string) {
  * Files go first: Storage objects must be removed through the Storage API.
  */
 export async function deleteAccount(userId: string, organizationId: string) {
+  // Other farm members must retain access to shared recordings.
+  const { count, error: membersError } = await supabase
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", organizationId);
+  if (membersError) throw new Error(membersError.message);
+  if (!count) throw new Error("Couldn't verify farm membership. Please retry.");
   await removeFolder("avatars", userId);
-  await removeFolder("recordings", organizationId);
+  if (count === 1) await removeFolder("recordings", organizationId);
   const { error } = await supabase.rpc("delete_my_account");
   if (error) throw new Error(error.message);
   // The server session is gone; clear the local one too.

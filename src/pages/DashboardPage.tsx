@@ -211,7 +211,10 @@ export function DashboardPage() {
           aria-label="Farm overview"
           aria-busy={loading}
         >
-          <div className="metric">
+          <div
+            className="metric"
+            title="Logs recorded today. New ones haven't been reviewed yet."
+          >
             <div className="metric-label">
               <Icon name="calendar" />
               Todays Recordings
@@ -223,14 +226,20 @@ export function DashboardPage() {
               )}
             </div>
           </div>
-          <div className="metric">
+          <div
+            className="metric"
+            title="Employees marked active. Change this in Settings."
+          >
             <div className="metric-label">
               <Icon name="worker" />
               Active Workers
             </div>
             <div className="metric-value">{metric(stats?.activeWorkers)}</div>
           </div>
-          <div className="metric">
+          <div
+            className="metric"
+            title="This month's average share of recorded details that reviewers kept without correcting."
+          >
             <div className="metric-label">
               <Icon name="percent" />
               Response Accuracy

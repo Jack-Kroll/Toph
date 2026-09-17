@@ -1451,6 +1451,38 @@ a.nav-item:focus-visible,
 .settings-form .settings-hint {
   margin-top: -6px;
 }
+.employee-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid #f0f0f0;
+}
+.employee-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 13px;
+  color: #999;
+}
+.employee-list label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: #151515;
+  cursor: pointer;
+}
+.employee-list label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.employee-list .status-active {
+  color: #3f8b5c;
+}
 .danger-card {
   border-color: #f2dada;
 }
@@ -1470,3 +1502,11 @@ a.nav-item:focus-visible,
     align-items: flex-start;
   }
 }
+
+.guided-form { margin: 0; padding: 16px; border: 1px solid #e0e4e5; border-radius: 8px; display: grid; gap: 14px; min-width: 0; }
+.guided-form legend { padding: 0 6px; font-weight: 600; }
+.guided-transcript { margin: 0; }
+.guided-transcript > div + div { margin-top: 12px; }
+.guided-transcript dt { font-weight: 600; }
+.guided-transcript dd { margin: 4px 0 0; white-space: pre-wrap; }
+.audio-status { font-size: 12px; color: #66736b; position: absolute; inset: 0; display: grid; place-items: center; padding: 8px; text-align: center; }

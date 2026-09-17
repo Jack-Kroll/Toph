@@ -72,6 +72,27 @@ do $$ begin
 end $$;
 insert into results select 'logs after reset (expect 14)', count(*)::text from public.activity_logs;
 
+-- Response accuracy is scored from the recording when a log is reviewed.
+create temp table isaac on commit drop as
+  select l.id from public.activity_logs l join public.employees e on e.id = l.employee_id
+  where e.full_name = 'Isaac Wang' and l.reviewed_at is null;
+update public.activity_logs set reviewed_at = now() where id = (select id from isaac);
+insert into results select 'reviewed unchanged (expect 100.00)', response_accuracy::text from public.activity_logs where id = (select id from isaac);
+update public.activity_logs set product_name = 'Other', application_rate = 20 where id = (select id from isaac);
+insert into results select 'two of seven corrected (expect 71.43)', response_accuracy::text from public.activity_logs where id = (select id from isaac);
+do $$ begin
+  begin
+    update public.activity_logs set response_accuracy = 100;
+    insert into results values ('write accuracy', 'ALLOWED (bad)');
+  exception when insufficient_privilege then insert into results values ('write accuracy', 'blocked (expected)');
+  end;
+  begin
+    update public.activity_logs set recorded_values = '{}';
+    insert into results values ('rewrite recording', 'ALLOWED (bad)');
+  exception when insufficient_privilege then insert into results values ('rewrite recording', 'blocked (expected)');
+  end;
+end $$;
+
 -- Settings, as the email user again.
 select set_config('request.jwt.claims', '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}', true);
 update public.organizations set name = 'Renamed Farm' where id = private.current_org_id();
@@ -95,6 +116,19 @@ do $$ begin
   exception when insufficient_privilege then insert into results values ('edit demo flag', 'blocked (expected)');
   end;
 end $$;
+-- Dashboard-entered logs stand in for recordings.
+insert into public.employees (full_name) values ('Test Worker');
+insert into public.fields (name) values ('Test Field');
+insert into public.activity_logs (employee_id, field_id, activity_type, started_at, ended_at, product_name, reviewed_at)
+select e.id, f.id, 'Spraying', '2026-09-01 08:00:15+00', '2026-09-01 10:00+00', 'Atrazine', v.reviewed
+from public.employees e, public.fields f, (values (null::timestamptz), (now())) as v(reviewed);
+insert into results select 'entered reviewed (expect 100.00)', response_accuracy::text from public.activity_logs where reviewed_at is not null;
+-- The form saves times to the minute; that alone isn't a correction.
+update public.activity_logs set reviewed_at = now(), started_at = '2026-09-01 08:00+00' where reviewed_at is null;
+insert into results select 'entered, then reviewed (expect 100.00,100.00)', string_agg(response_accuracy::text, ',') from public.activity_logs;
+update public.activity_logs set product_name = 'Dicamba', activity_type = 'Fertilizing';
+insert into results select 'two fixes after review (expect 71.43,71.43)', string_agg(response_accuracy::text, ',') from public.activity_logs;
+insert into results select 'farm accuracy (expect 71)', response_accuracy::text from public.dashboard_stats();
 update public.profiles set avatar_path = '11111111-1111-1111-1111-111111111111/photo.webp' where id = auth.uid();
 insert into results select 'own avatar path (expect saved)', coalesce(avatar_path, 'missing') from public.profiles where id = auth.uid();
 select public.delete_my_account();

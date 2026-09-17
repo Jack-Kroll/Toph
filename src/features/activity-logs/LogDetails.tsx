@@ -4,19 +4,9 @@ import { Icon } from "../../components/Icon";
 import { LazySatelliteMap } from "../../components/LazySatelliteMap";
 import type { ActivityLog } from "./api";
 import { BAR_COUNT, useRecording } from "./useRecording";
-
-// Bar heights traced from the design's waveform, shown when a log has no
-// recording to draw from.
-const DESIGN_BARS = Array.from({ length: BAR_COUNT }, (_, index) =>
-  index < 8
-    ? [12, 23, 34, 44, 50, 43, 34, 22][index]
-    : index > 26 && index < 42
-      ? [9, 16, 22, 31, 50, 60, 45, 30, 24, 17, 15, 10, 12, 15, 23][index - 27]
-      : index < 55
-        ? 10
-        : 6,
-);
-const DESIGN_PROGRESS = 55;
+import { parseTranscript } from "./transcript";
+import { TranscriptSpeech } from "./speech";
+import { DESIGN_BARS } from "./audioSamples";
 
 function formatNumber(value: number) {
   return Number.isInteger(value) ? value.toLocaleString() : String(value);
@@ -44,35 +34,52 @@ export function LogDetails({
   onEdit,
   onOpenMap,
 }: Props) {
-  const { recording, loading, failed } = useRecording(log.audioPath);
+  // Seeded files use one voice throughout; read their current Q&A with browser voices.
+  const recordingPath =
+    log.audioPath?.startsWith("demo/") && log.transcript ? null : log.audioPath;
+  const { recording, loading, error, prepare } = useRecording(recordingPath);
+  const [playError, setPlayError] = useState<string | null>(null);
+  const exchanges = parseTranscript(log.transcript ?? "");
   const [playing, setPlaying] = useState(false);
   // Percent played; null until playback starts.
   const [progress, setProgress] = useState<number | null>(null);
   const [tagInput, setTagInput] = useState("");
   const [savingTag, setSavingTag] = useState(false);
   const audio = useRef<HTMLAudioElement | null>(null);
+  const speech = useRef<TranscriptSpeech | null>(null);
 
-  useEffect(
-    () => () => {
-      audio.current?.pause();
-      window.speechSynthesis?.cancel();
-    },
-    [],
-  );
-
-  // Speech playback has no reliable position events, so estimate progress.
   useEffect(() => {
-    if (!playing || recording) return;
-    const timer = window.setInterval(
-      () => setProgress((value) => Math.min((value ?? 0) + 0.35, 100)),
-      200,
-    );
-    return () => window.clearInterval(timer);
-  }, [playing, recording]);
+    window.speechSynthesis?.getVoices();
+  }, []);
+
+  useEffect(() => {
+    // The media source changed; reset the state associated with the old source.
+    // oxlint-disable-next-line react/set-state-in-effect
+    setPlaying(false);
+    setProgress(null);
+    setPlayError(null);
+    return () => {
+      speech.current?.stop();
+      speech.current = null;
+      const element = audio.current;
+      if (element) {
+        element.onplay =
+          element.onpause =
+          element.onended =
+          element.ontimeupdate =
+          element.onerror =
+            null;
+        element.pause();
+        element.removeAttribute("src");
+        element.load();
+      }
+      audio.current = null;
+    };
+  }, [recording, log.id, log.transcript, log.employeeId]);
 
   function stop() {
     audio.current?.pause();
-    window.speechSynthesis?.cancel();
+    speech.current?.pause();
     setPlaying(false);
   }
 
@@ -84,7 +91,14 @@ export function LogDetails({
         setProgress((element.currentTime / element.duration) * 100);
       element.onpause = () => setPlaying(false);
       element.onplay = () => setPlaying(true);
-      element.onended = () => setProgress(null);
+      element.onended = () => {
+        setPlaying(false);
+        setProgress(null);
+      };
+      element.onerror = () => {
+        setPlaying(false);
+        setPlayError("Playback failed. Try preparing the audio again.");
+      };
       audio.current = element;
     }
     return audio.current;
@@ -96,26 +110,29 @@ export function LogDetails({
       await audioElement(recording.url).play();
       return;
     }
-    // No playable recording: read the transcript aloud instead.
-    if (!window.speechSynthesis || !log.transcript) return;
-    const speech = new SpeechSynthesisUtterance(log.transcript);
-    speech.rate = 0.95;
-    speech.onend = () => {
-      setPlaying(false);
-      setProgress(null);
-    };
-    speech.onerror = () => setPlaying(false);
-    setProgress(0);
-    setPlaying(true);
-    window.speechSynthesis.speak(speech);
+    if (recordingPath && !error) {
+      prepare();
+      return;
+    }
+    if (!window.speechSynthesis) throw new Error("Speech is unavailable");
+    speech.current ??= new TranscriptSpeech(
+      window.speechSynthesis,
+      setPlaying,
+      setPlayError,
+    );
+    speech.current.play(log.transcript ?? "", log.employeeId);
   }
 
   function seek(event: MouseEvent<HTMLDivElement>) {
     if (!recording) return;
     const bounds = event.currentTarget.getBoundingClientRect();
-    const fraction = (event.clientX - bounds.left) / bounds.width;
+    const fraction = Math.max(
+      0,
+      Math.min(1, (event.clientX - bounds.left) / bounds.width),
+    );
     const element = audioElement(recording.url);
     const jump = () => {
+      if (!Number.isFinite(element.duration)) return;
       element.currentTime = fraction * element.duration;
       setProgress(fraction * 100);
     };
@@ -136,11 +153,12 @@ export function LogDetails({
     }
   }
 
-  const heights = recording
-    ? recording.peaks.map((peak) => Math.max(3, Math.round(peak * 60)))
-    : DESIGN_BARS;
-  // Without a recording, rest where the design shows the playhead.
-  const shownProgress = progress ?? (recording ? null : DESIGN_PROGRESS);
+  const hasWaveform = Boolean(recording?.peaks.length);
+  const heights =
+    hasWaveform && recording
+      ? recording.peaks.map((peak) => Math.max(3, Math.round(peak * 60)))
+      : DESIGN_BARS;
+  const shownProgress = hasWaveform ? progress : 55;
 
   const application = [
     log.productName,
@@ -152,10 +170,12 @@ export function LogDetails({
     <div className="entry-details">
       <div className="recording-details">
         <div
-          className={`waveform ${recording ? "seekable" : ""}`}
-          aria-label="Recording waveform"
+          className={`waveform ${hasWaveform ? "seekable" : ""}`}
+          aria-label={
+            hasWaveform ? "Recording waveform" : "Decorative waveform"
+          }
           aria-busy={loading}
-          onClick={seek}
+          onClick={hasWaveform ? seek : undefined}
         >
           <div className={`wave-bars ${loading ? "loading" : ""}`}>
             {heights.map((height, index) => (
@@ -172,30 +192,46 @@ export function LogDetails({
               />
             ))}
           </div>
-          <div
-            className="playhead"
-            style={{ left: `${shownProgress ?? 0}%` } as CSSProperties}
-          />
+          {hasWaveform && (
+            <div
+              className="playhead"
+              style={{ left: `${shownProgress ?? 0}%` } as CSSProperties}
+            />
+          )}
         </div>
         <button
           className="wide-button play-button"
-          onClick={() => play().catch(stop)}
+          onClick={() => {
+            setPlayError(null);
+            void play().catch(() => {
+              stop();
+              setPlayError("Playback couldn't start. Press Play to try again.");
+            });
+          }}
           disabled={loading || (!recording && !log.transcript)}
-          title={
-            recording
-              ? undefined
-              : failed
-                ? "The recording couldn't be loaded; plays a spoken reading of the transcript"
-                : "No recording uploaded; plays a spoken reading of the transcript"
-          }
         >
           <Icon name={playing ? "pause" : "play"} size={15} />
           {loading
             ? "Loading Recording…"
             : playing
-              ? "Pause Recording"
-              : "Play Recording"}
+              ? recording
+                ? "Pause Recording"
+                : "Pause Reading"
+              : recording
+                ? "Play Recording"
+                : "Read Transcript"}
         </button>
+        {(error || playError) && (
+          <p className="form-error" role="alert">
+            {error || playError}
+            {recordingPath && (
+              <button className="text-button" onClick={prepare}>
+                Reload audio
+              </button>
+            )}
+          </p>
+        )}
+
         <div className="tag-area">
           <button
             className="wide-button tag-button"
@@ -260,9 +296,20 @@ export function LogDetails({
             Edit
           </button>
         </div>
-        <p className="summary">
-          {log.transcript ? `"${log.transcript}` : "No transcript recorded."}
-        </p>
+        {exchanges.length ? (
+          <dl className="summary guided-transcript">
+            {exchanges.map((exchange, index) => (
+              <div key={index}>
+                <dt>{exchange.question}</dt>
+                <dd>{exchange.answer || "No answer recorded."}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <p className="summary">
+            {log.transcript || "No transcript recorded."}
+          </p>
+        )}
       </div>
       <div className="map-details">
         {!liveMap ? (

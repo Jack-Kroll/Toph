@@ -1,39 +1,25 @@
-# Feature checklist
+# Features
 
-## Submission-critical
+## Dashboard
 
-- [x] Match the supplied dashboard layout and visual states
-- [x] Display database-backed summary metrics
-- [x] Display persistent employee activity logs
-- [x] Search, sort, and filter activity logs
-- [x] Expand and collapse an activity-log row
-- [x] Play the recording associated with a log (signed URL, or spoken transcript when none is uploaded)
-- [x] Display the transcript and summary
-- [x] Display the field location on a map (reference image and expansion dialog)
-- [x] Add and remove persistent tags
-- [x] Create, edit, and delete activity logs
-- [x] Preserve changes after a page refresh
-- [x] Provide loading, empty, error, and success states
-- [x] Verify the production Netlify deployment
+Daily recording totals, unreviewed-log counts, active employees, and monthly response accuracy are calculated from farm data. Search, activity and month filters, reviewed status, and sorting help locate logs.
 
-## Above and beyond
+## Activity logs
 
-- [x] Authenticate users and provide a one-click reviewer demo
-- [x] Isolate organization data with Postgres row-level security
-- [x] Add responsive behavior for smaller screens
-- [x] Add accessible keyboard and focus behavior
-- [x] Add unit tests for data transformations and filters
-- [ ] Add an end-to-end test covering login, editing, and refresh persistence
-- [x] Document the database model and implementation tradeoffs
-- [x] Live updates through Supabase Realtime
-- [x] Private demo farm per browser (anonymous sign-in), with reset and automatic cleanup
-- [x] Bulk mark reviewed, mark new, and delete
-- [x] Empty farms for new accounts, with inline employee and field creation
-- [x] Settings: profile photo, name, farm name and time zone, delete account
-- [x] Routed sidebar with "under construction" pages for unfinished sections
+Create and edit work details, employee and field assignments, product rates, locations, and guided transcripts. Review or delete selected logs together. Tags are saved and reused within each farm.
 
-## Deliberately out of scope
+## Transcripts and audio
 
-- The farm-worker mobile recording application
-- Complete implementations of every sidebar destination
-- Production speech transcription or AI summarization
+Guided forms use the demo's activity, location, and follow-up questions. Questions share a narrator voice; answers use a consistent employee voice from the browser's available voices. Every expanded log shows a waveform: decoded audio for recordings, or the original design's decorative waveform for transcript reading.
+
+## Maps
+
+Account logs display satellite maps with recorded locations. The log form supports clicking the map, using a field's position, or sharing the current location. Demo logs use the supplied reference map.
+
+## Accounts and settings
+
+Email accounts start with an empty farm. Demo sessions receive sample data with saved changes and a reset action. Settings supports profile photos, names, farm details, common time zones, employee status, and account deletion. Employees with no remaining logs are hidden from the Settings list.
+
+## Data and accessibility
+
+Supabase row-level security isolates farm data, and live log updates refresh the dashboard. Responsive layouts, keyboard focus management, labeled controls, and visible loading/error states support everyday use.

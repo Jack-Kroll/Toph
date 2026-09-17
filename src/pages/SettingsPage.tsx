@@ -5,13 +5,10 @@ import { errorMessage, useLayout } from "../components/layoutContext";
 import { Modal } from "../components/Modal";
 import type { Profile } from "../hooks/useDashboardData";
 import * as settings from "../features/settings/api";
+import { employeesWithLogs } from "../features/settings/employees";
+import { timeZoneOptions } from "../features/settings/timeZones";
 
 const CONFIRM_WORD = "DELETE";
-
-function timeZones(current: string) {
-  const zones = Intl.supportedValuesOf("timeZone");
-  return zones.includes(current) ? zones : [current, ...zones];
-}
 
 export function SettingsPage() {
   const { data } = useLayout();
@@ -44,19 +41,24 @@ export function SettingsPage() {
 function SettingsForms({ profile }: { profile: Profile }) {
   const { session, data, notify } = useLayout();
   const isAdmin = profile.role === "admin";
+  const employees = employeesWithLogs(data.employees, data.logs);
   const isDemo = session.user.is_anonymous ?? false;
 
   const [fullName, setFullName] = useState(profile.fullName);
   const [farmName, setFarmName] = useState(profile.organization.name);
   const [timezone, setTimezone] = useState(profile.organization.timezone);
   const [busy, setBusy] = useState<
-    "photo" | "name" | "farm" | "delete" | null
+    "photo" | "name" | "farm" | "employee" | "delete" | null
   >(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
   const zones = useMemo(
-    () => timeZones(profile.organization.timezone),
+    () =>
+      timeZoneOptions(
+        profile.organization.timezone,
+        Intl.DateTimeFormat().resolvedOptions().timeZone,
+      ),
     [profile.organization.timezone],
   );
 
@@ -65,6 +67,7 @@ function SettingsForms({ profile }: { profile: Profile }) {
     action: () => Promise<void>,
     success: string,
   ) {
+    if (busy) return;
     setBusy(task);
     try {
       await action();
@@ -106,11 +109,7 @@ function SettingsForms({ profile }: { profile: Profile }) {
     void run(
       "farm",
       () =>
-        settings.updateFarm(
-          profile.organization.id,
-          farmName.trim(),
-          timezone,
-        ),
+        settings.updateFarm(profile.organization.id, farmName.trim(), timezone),
       "Farm details updated.",
     );
   }
@@ -143,7 +142,7 @@ function SettingsForms({ profile }: { profile: Profile }) {
               <button
                 type="button"
                 className="secondary-button"
-                disabled={busy === "photo"}
+                disabled={busy !== null}
                 onClick={() => fileInput.current?.click()}
               >
                 {busy === "photo" ? "Uploading…" : "Upload photo"}
@@ -152,7 +151,7 @@ function SettingsForms({ profile }: { profile: Profile }) {
                 <button
                   type="button"
                   className="text-button"
-                  disabled={busy === "photo"}
+                  disabled={busy !== null}
                   onClick={() =>
                     void run(
                       "photo",
@@ -200,7 +199,7 @@ function SettingsForms({ profile }: { profile: Profile }) {
             <button
               type="submit"
               className="primary-button"
-              disabled={!nameChanged || !fullName.trim() || busy === "name"}
+              disabled={!nameChanged || !fullName.trim() || busy !== null}
             >
               {busy === "name" ? "Saving…" : "Save name"}
             </button>
@@ -229,8 +228,8 @@ function SettingsForms({ profile }: { profile: Profile }) {
               onChange={(event) => setTimezone(event.target.value)}
             >
               {zones.map((zone) => (
-                <option key={zone} value={zone}>
-                  {zone.replaceAll("_", " ")}
+                <option key={zone.value} value={zone.value}>
+                  {zone.label}
                 </option>
               ))}
             </select>
@@ -245,7 +244,7 @@ function SettingsForms({ profile }: { profile: Profile }) {
               <button
                 type="submit"
                 className="primary-button"
-                disabled={!farmChanged || !farmName.trim() || busy === "farm"}
+                disabled={!farmChanged || !farmName.trim() || busy !== null}
               >
                 {busy === "farm" ? "Saving…" : "Save farm"}
               </button>
@@ -256,17 +255,58 @@ function SettingsForms({ profile }: { profile: Profile }) {
         </form>
       </section>
 
+      <section className="settings-card" aria-labelledby="employees-heading">
+        <h2 id="employees-heading">Employees</h2>
+        <p>
+          Active employees count toward Active Workers and can be picked for new
+          logs. Turning someone off keeps their past logs. Employees leave this
+          list when their last log is deleted.
+        </p>
+        {employees.length === 0 ? (
+          <p className="settings-hint">
+            No employees with logs yet. Create a log from the dashboard.
+          </p>
+        ) : (
+          <ul className="employee-list">
+            {employees.map((employee) => (
+              <li key={employee.id}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={employee.active}
+                    disabled={!isAdmin || busy !== null}
+                    onChange={(event) => {
+                      const active = event.target.checked;
+                      void run(
+                        "employee",
+                        () => settings.setEmployeeActive(employee.id, active),
+                        `${employee.name} is now ${active ? "active" : "inactive"}.`,
+                      );
+                    }}
+                  />
+                  <span>{employee.name}</span>
+                </label>
+                <span className={employee.active ? "status-active" : ""}>
+                  {employee.active ? "Active" : "Inactive"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {!isAdmin && (
+          <p className="settings-hint">Only farm admins can change these.</p>
+        )}
+      </section>
+
       <section
         className="settings-card danger-card"
         aria-labelledby="delete-heading"
       >
-        <h2 id="delete-heading">
-          {isDemo ? "Delete demo" : "Delete account"}
-        </h2>
+        <h2 id="delete-heading">{isDemo ? "Delete demo" : "Delete account"}</h2>
         <p>
           {isDemo
             ? "Removes this demo farm and everything you changed in it. Starting the demo again creates a fresh copy."
-            : "Permanently deletes your account and your farm, including its employees, fields, logs, tags, and recordings. This can't be undone."}
+            : "Permanently deletes your account. If you are the only farm member, its employees, fields, logs, tags, and recordings are deleted too. This can't be undone."}
         </p>
         <div className="settings-actions">
           <button
@@ -295,8 +335,9 @@ function SettingsForms({ profile }: { profile: Profile }) {
             }}
           >
             <p className="modal-message">
-              This deletes <strong>{profile.organization.name}</strong> and
-              everything in it. Type <strong>{CONFIRM_WORD}</strong> to confirm.
+              This deletes your account and, if you are its only member,{" "}
+              <strong>{profile.organization.name}</strong> and everything in it.
+              Type <strong>{CONFIRM_WORD}</strong> to confirm.
             </p>
             <input
               autoFocus

@@ -6,7 +6,11 @@ import { Sidebar } from "./Sidebar";
 import { useDashboardData } from "../hooks/useDashboardData";
 import { supabase } from "../lib/supabase";
 import { resetDemoData } from "../features/activity-logs/api";
-import { errorMessage, type LayoutContext, type ToastTone } from "./layoutContext";
+import {
+  errorMessage,
+  type LayoutContext,
+  type ToastTone,
+} from "./layoutContext";
 
 type Toast = { message: string; tone: ToastTone };
 
@@ -49,7 +53,14 @@ export function AppLayout({ session }: { session: Session }) {
         profile={data.profile}
         email={session.user.is_anonymous ? null : (session.user.email ?? null)}
         newCount={data.stats?.todaysNew ?? 0}
-        onSignOut={() => void supabase.auth.signOut()}
+        onSignOut={() => {
+          void supabase.auth
+            .signOut()
+            .then(({ error }) => {
+              if (error) notify(`Couldn't sign out: ${error.message}`, "error");
+            })
+            .catch((error) => notify(errorMessage(error), "error"));
+        }}
         onResetDemo={() => setConfirmReset(true)}
       />
       <Outlet context={{ session, data, notify } satisfies LayoutContext} />

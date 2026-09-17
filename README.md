@@ -1,94 +1,77 @@
 # Toph
 
-Full-stack implementation of the Toph farm activity dashboard from the Fall 2026 Developer Challenge.
+A farm activity dashboard for reviewing employee logs, listening to guided transcripts, and tracking work across fields. Built with React, TypeScript, and Supabase, with a responsive interface based on the supplied Figma design.
 
-**Live site:** [tophwebsite.netlify.app](https://tophwebsite.netlify.app/)
+**[Open Toph](https://tophwebsite.netlify.app/)** · [Architecture](ARCHITECTURE.md) · [Features](docs/FEATURES.md)
 
-**Demo:** click **Try the demo** on the login page. Each browser gets its own private demo farm, so your edits are saved and nobody else sees them. You can also create an account with any email and password. New accounts start with an empty farm and add employees and fields from the **New Log** form.
+Choose **Try the demo** to explore a saved demo farm, or create an account to start your own. Add employees and fields directly from **New Log**.
 
 ## Features
 
-- Dashboard matching the supplied Figma default and expanded-entry frames
-- Metrics (Todays Recordings, New, Active Workers, Response Accuracy) calculated in Postgres
-- "New Employee Logs" inbox: unreviewed logs for the current month, with search, sort, activity filter, and a toggle to include reviewed logs
-- Expandable rows with real recordings (private Storage, signed URLs), a waveform drawn from the audio with click-to-seek, tags, transcript, product and rate applied, and a field map
-- Live satellite maps for signed-up accounts, plus a location picker in the log form (click the map, use the field's location, or use your current location); the demo keeps the design's map image
-- Create, edit, and delete logs; bulk mark reviewed, mark new, and delete from the row checkboxes
-- Tags saved per farm and reused across logs
-- Private demo per browser (Supabase anonymous sign-in) with sample data, plus email/password accounts that start with an empty farm in the browser's time zone
-- Add a new employee or field right from the log form
-- Unused demo farms are deleted automatically after 14 days
-- Farm isolation with Postgres row-level security
-- Live updates: logs added or changed elsewhere (for example by the mobile app) appear without a refresh
-- Reset demo data from the account menu (inbox icon beside the farm name)
-- Loading, empty, error, and success states
-- Settings page: upload or remove a profile photo, change your name, change the farm name and time zone, and delete your account (or demo)
-- Real URLs for every sidebar section; unfinished sections show an illustrated "under construction" page
-
-See [ARCHITECTURE.md](ARCHITECTURE.md) for the reasoning behind each decision.
+- Daily recording totals, active-worker counts, and review accuracy
+- Searchable activity logs with sorting, filters, tags, and bulk review actions
+- Guided question-and-answer transcripts with distinct narrator and employee voices
+- Recording playback, waveform displays, and seeking for uploaded audio
+- Field locations, satellite maps, and an interactive location picker
+- Profile photos, farm settings, employee status, and account management
+- Saved changes, live log updates, and farm isolation through row-level security
+- Responsive layouts and keyboard-accessible forms and dialogs
 
 ## Stack
 
-| Layer | Choice |
+| Layer | Technology |
 | --- | --- |
-| Frontend | React 19, TypeScript, Vite, React Router, plain CSS |
-| Backend | Supabase: Postgres, Auth, Storage, Realtime |
-| Hosting | Netlify, deployed from `main` |
-| Tests | Vitest (unit) and a rolled-back SQL check for RLS |
+| Frontend | React 19, TypeScript, Vite, React Router, CSS |
+| Backend | Supabase Postgres, Auth, Storage, Realtime |
+| Hosting | Netlify |
+| Tests | Vitest and transactional SQL checks |
 
-## Local setup
+## Run locally
 
-Requirements: Node.js 24 and npm.
+Use Node.js 24 and npm.
 
 ```bash
-npm install
-cp .env.example .env.local   # fill in the Supabase URL and publishable key
+npm ci
+cp .env.example .env.local
+# Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in .env.local.
 npm run dev
 ```
 
-| Script | Purpose |
+## Development
+
+| Command | Purpose |
 | --- | --- |
-| `npm run dev` | Start the Vite dev server |
-| `npm run build` | Type-check and build to `dist/` |
-| `npm run lint` | Lint with oxlint |
-| `npm test` | Unit tests for filtering, sorting, and time-zone handling |
-| `npm run db:push` | Apply `supabase/migrations` to the linked project |
-| `npm run db:types` | Regenerate `src/types/database.ts` from the live schema |
-| `npm run db:test` | Run the RLS and seed check inside a rolled-back transaction |
+| `npm run dev` | Start the development server |
+| `npm run build` | Type-check and create a production build |
+| `npm run preview` | Preview the production build |
+| `npm run lint` | Check code with oxlint |
+| `npm test` | Run unit and regression tests |
+| `npm run db:push` | Apply database migrations |
+| `npm run db:types` | Generate TypeScript database types |
+| `npm run db:test` | Run database isolation and behavior checks in a rolled-back transaction |
 
-Database commands need `npx supabase login` and `npx supabase link --project-ref <ref>` first.
-
-## Deployment
-
-Netlify builds with the settings in `netlify.toml` (`npm run build`, publish `dist`, Node 24, SPA fallback). Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` under **Site configuration → Environment variables**. The publishable key is designed to be public; the database password and secret keys are never used by the app or committed.
-
-In Supabase, **Allow anonymous sign-ins** is on (for the demo) and **Confirm email** is off (so new accounts can sign in immediately).
+Database commands use a linked Supabase project: run `npx supabase login` and `npx supabase link --project-ref <ref>` first.
 
 ## Project structure
 
 ```text
 src/
-  App.tsx                          Auth gate and routes
-  navigation.ts                    Sidebar sections, paths, and descriptions
-  pages/                           Login, Dashboard, Settings, Under Construction
-  components/                      App layout, Sidebar, Modal/ConfirmDialog, Icon, illustration
-  features/activity-logs/          API calls, filters, expanded row, log form
-  features/settings/               Profile photo, farm, and account deletion calls
-  hooks/                           Session and dashboard data (with Realtime)
-  lib/                             Supabase client, time-zone helpers
-  types/database.ts                Generated database types
+  components/              Shared layout, dialogs, maps, and UI
+  features/activity-logs/  Log forms, data access, transcripts, and playback
+  features/settings/       Profile and farm settings
+  hooks/                   Authentication and dashboard data
+  lib/                     Supabase client and time helpers
+  pages/                   Routed application screens
+  types/                   Database types
 supabase/
-  migrations/                      Schema, RLS, seed function, storage, Realtime
-  demo-audio/                      Recordings uploaded to recordings/demo/
-  tests/rls_check.sql              Rolled-back security and seed check
-tests/unit/                        Vitest tests
-scripts/generate-demo-audio.py     Rebuilds the demo recordings
-public/reference/                  Avatar and map images from the design
+  migrations/              Schema, policies, and database functions
+  tests/                   Transactional database checks
+tests/unit/                Frontend regression tests
+public/reference/          Design reference images
 ```
 
-## Known limitations
+## Deployment
 
-- Demo recordings are generated with macOS text-to-speech (`scripts/generate-demo-audio.py`), not real field recordings. Logs created in the dashboard have no audio, so **Play Recording** reads their transcript aloud instead.
-- Demo sessions show the design's map image; the live map (Esri World Imagery, no API key) appears for email accounts. Esri's terms allow this for development and demos; production use would need an Esri or MapTiler plan. To preview the live map in a local demo session, add `?liveMap` to the URL (development builds only).
-- Demo farms treat April 22, 2026 as "today" so the seeded numbers match the design. Farms without `demo_as_of` use the real date in their time zone.
-- Sidebar sections other than Dashboard and Settings are placeholders that show an "under construction" page.
+Netlify uses `netlify.toml`: `npm run build`, publish `dist`, Node 24, and a single-page-app route fallback. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in the site's environment variables.
+
+Enable anonymous sign-ins in Supabase for the demo. The frontend uses the publishable key; database credentials and secret keys stay outside the application.

@@ -26,7 +26,14 @@ function zonedParts(date: Date, timeZone: string) {
 
 function offsetMs(date: Date, timeZone: string) {
   const p = zonedParts(date, timeZone);
-  const asUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+  const asUtc = Date.UTC(
+    p.year,
+    p.month - 1,
+    p.day,
+    p.hour,
+    p.minute,
+    p.second,
+  );
   return asUtc - Math.floor(date.getTime() / 1000) * 1000;
 }
 
@@ -37,7 +44,17 @@ export function zonedToIso(date: string, time: string, timeZone: string) {
   const wall = new Date(`${date}T${time}:00Z`);
   // A second pass settles the offset on days that cross a DST change.
   const first = new Date(wall.getTime() - offsetMs(wall, timeZone));
-  return new Date(wall.getTime() - offsetMs(first, timeZone)).toISOString();
+  const iso = new Date(
+    wall.getTime() - offsetMs(first, timeZone),
+  ).toISOString();
+  // Spring-forward gaps have no corresponding instant. Don't silently save
+  // a different hour than the one entered in the form.
+  if (localDate(iso, timeZone) !== date || localTime(iso, timeZone) !== time) {
+    throw new Error(
+      "That local time doesn't exist because the clocks change. Choose another time.",
+    );
+  }
+  return iso;
 }
 
 /** ISO instant -> local date ("2026-04-19") in the farm's time zone. */
@@ -68,7 +85,6 @@ export function formatTimeRange(start: string, end: string, timeZone: string) {
     minute: "2-digit",
   });
   // Newer ICU versions put a narrow no-break space before AM/PM.
-  const time = (iso: string) =>
-    format.format(new Date(iso)).replace(/ /g, " ");
+  const time = (iso: string) => format.format(new Date(iso)).replace(/ /g, " ");
   return `${time(start)} - ${time(end)}`;
 }

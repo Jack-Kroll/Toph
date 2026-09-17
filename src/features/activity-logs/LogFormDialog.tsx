@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { QUESTIONS, parseTranscript, serializeTranscript } from "./transcript";
 import type { ChangeEvent, FormEvent } from "react";
 import { LazySatelliteMap } from "../../components/LazySatelliteMap";
 import { Modal } from "../../components/Modal";
@@ -8,14 +9,14 @@ import {
   ACTIVITY_TYPES,
   type ActivityLog,
   type ActivityType,
+  type EmployeeOption,
   type FieldOption,
   type LogInput,
-  type Option,
 } from "./api";
 
 type Props = {
   log: ActivityLog | null;
-  employees: Option[];
+  employees: EmployeeOption[];
   fields: FieldOption[];
   timeZone: string;
   defaultDate: string;
@@ -42,7 +43,7 @@ const formatPoint = (point: LatLng) =>
 
 export function LogFormDialog({
   log,
-  employees,
+  employees: allEmployees,
   fields,
   timeZone,
   defaultDate,
@@ -51,6 +52,10 @@ export function LogFormDialog({
   onDelete,
   onClose,
 }: Props) {
+  // Keep an inactive employee selectable on the log they already recorded.
+  const employees = allEmployees.filter(
+    (employee) => employee.active || employee.id === log?.employeeId,
+  );
   const [form, setForm] = useState({
     employeeId: log?.employeeId ?? employees[0]?.id ?? NEW,
     fieldId: log?.fieldId ?? fields[0]?.id ?? NEW,
@@ -63,9 +68,19 @@ export function LogFormDialog({
     productName: log?.productName ?? "",
     applicationRate: log?.applicationRate?.toString() ?? "",
     rateUnit: log?.rateUnit ?? "",
-    transcript: log?.transcript ?? "",
     reviewed: log ? log.reviewedAt !== null : false,
   });
+  const [exchanges, setExchanges] = useState(() => {
+    const existing = parseTranscript(log?.transcript ?? "");
+    return existing.length
+      ? existing
+      : QUESTIONS.map(({ key, text }) => ({
+          key,
+          question: text,
+          answer: key === "notes" ? (log?.transcript ?? "") : "",
+        }));
+  });
+  const [transcriptChanged, setTranscriptChanged] = useState(false);
   const logPoint =
     log?.latitude != null && log.longitude != null
       ? { latitude: log.latitude, longitude: log.longitude }
@@ -147,13 +162,14 @@ export function LogFormDialog({
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (saving) return;
     if (form.end <= form.start) {
       setError("End time must be after the start time.");
       return;
     }
     const rate = form.applicationRate.trim();
-    if (rate && (Number.isNaN(Number(rate)) || Number(rate) < 0)) {
-      setError("Application rate must be a positive number.");
+    if (rate && (!Number.isFinite(Number(rate)) || Number(rate) < 0)) {
+      setError("Application rate must be a finite, non-negative number.");
       return;
     }
     const newEmployeeName =
@@ -177,7 +193,10 @@ export function LogFormDialog({
         productName: form.productName.trim() || null,
         applicationRate: rate ? Number(rate) : null,
         rateUnit: form.rateUnit.trim() || null,
-        transcript: form.transcript.trim() || null,
+        transcript:
+          log && !transcriptChanged
+            ? log.transcript
+            : serializeTranscript(exchanges),
         latitude: point?.latitude ?? null,
         longitude: point?.longitude ?? null,
         reviewed: form.reviewed,
@@ -198,7 +217,9 @@ export function LogFormDialog({
   return (
     <Modal
       title={log ? "Edit Log" : "New Log"}
-      onClose={onClose}
+      onClose={() => {
+        if (!saving) onClose();
+      }}
       className="form-modal"
     >
       <form className="log-form" onSubmit={submit}>
@@ -362,14 +383,29 @@ export function LogFormDialog({
           </div>
         )}
 
-        <label className="span-3">
-          Transcript
-          <textarea
-            rows={4}
-            value={form.transcript}
-            onChange={set("transcript")}
-          />
-        </label>
+        <fieldset className="guided-form span-3">
+          <legend>Guided transcript</legend>
+          {exchanges.map((exchange, index) => (
+            <label key={index}>
+              {exchange.question}
+              <textarea
+                rows={2}
+                value={exchange.answer}
+                maxLength={4000}
+                onChange={(event) => {
+                  setTranscriptChanged(true);
+                  setExchanges((current) =>
+                    current.map((item, i) =>
+                      i === index
+                        ? { ...item, answer: event.target.value }
+                        : item,
+                    ),
+                  );
+                }}
+              />
+            </label>
+          ))}
+        </fieldset>
         <label className="checkbox-label span-3">
           <input
             type="checkbox"
@@ -385,11 +421,21 @@ export function LogFormDialog({
         )}
         <div className="form-actions span-3">
           {onDelete && (
-            <button type="button" className="danger-link" onClick={onDelete}>
+            <button
+              type="button"
+              className="danger-link"
+              onClick={onDelete}
+              disabled={saving}
+            >
               Delete log
             </button>
           )}
-          <button type="button" className="secondary-button" onClick={onClose}>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={onClose}
+            disabled={saving}
+          >
             Cancel
           </button>
           <button type="submit" className="primary-button" disabled={saving}>

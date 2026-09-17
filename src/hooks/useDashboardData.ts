@@ -6,8 +6,8 @@ import {
   fetchStats,
   type ActivityLog,
   type DashboardStats,
+  type EmployeeOption,
   type FieldOption,
-  type Option,
 } from "../features/activity-logs/api";
 
 export type Organization = {
@@ -54,7 +54,7 @@ export function useDashboardData(userId: string) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [employees, setEmployees] = useState<Option[]>([]);
+  const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [fields, setFields] = useState<FieldOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +79,9 @@ export function useDashboardData(userId: string) {
       setError(null);
     } catch (caught) {
       if (id !== requestId.current) return;
-      setError(caught instanceof Error ? caught.message : "Something went wrong.");
+      setError(
+        caught instanceof Error ? caught.message : "Something went wrong.",
+      );
     } finally {
       if (id === requestId.current) setLoading(false);
     }
@@ -98,6 +100,9 @@ export function useDashboardData(userId: string) {
       )
       .subscribe();
     return () => {
+      // Invalidate the live request counter, not a captured DOM ref.
+      // oxlint-disable-next-line react-hooks/exhaustive-deps
+      requestId.current++;
       void supabase.removeChannel(channel);
     };
   }, [refresh]);
