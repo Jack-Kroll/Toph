@@ -181,7 +181,7 @@ function friendlyInsertError(
   );
 }
 
-export async function createEmployee(fullName: string): Promise<Option> {
+async function createEmployee(fullName: string): Promise<Option> {
   const { data, error } = await supabase
     .from("employees")
     .insert({ full_name: fullName })
@@ -191,7 +191,7 @@ export async function createEmployee(fullName: string): Promise<Option> {
   return { id: data.id, name: data.full_name };
 }
 
-export async function createField(
+async function createField(
   name: string,
   latitude: number | null,
   longitude: number | null,

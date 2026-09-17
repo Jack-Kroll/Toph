@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computePeaks } from "../../src/features/activity-logs/useRecording";
+import { computePeaks } from "../../src/features/activity-logs/audioSamples";
 
 describe("computePeaks", () => {
   it("takes the loudest sample per slice and scales to the loudest slice", () => {

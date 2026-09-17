@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { recordingUrl } from "./api";
 import { computePeaks } from "./audioSamples";
-export { BAR_COUNT, computePeaks } from "./audioSamples";
 
 type Recording = { url: string; peaks: number[] };
 export function useRecording(path: string | null) {

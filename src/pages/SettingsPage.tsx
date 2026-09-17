@@ -5,7 +5,6 @@ import { errorMessage, useLayout } from "../components/layoutContext";
 import { Modal } from "../components/Modal";
 import type { Profile } from "../hooks/useDashboardData";
 import * as settings from "../features/settings/api";
-import { employeesWithLogs } from "../features/settings/employees";
 import { timeZoneOptions } from "../features/settings/timeZones";
 
 const CONFIRM_WORD = "DELETE";
@@ -41,7 +40,6 @@ export function SettingsPage() {
 function SettingsForms({ profile }: { profile: Profile }) {
   const { session, data, notify } = useLayout();
   const isAdmin = profile.role === "admin";
-  const employees = employeesWithLogs(data.employees, data.logs);
   const isDemo = session.user.is_anonymous ?? false;
 
   const [fullName, setFullName] = useState(profile.fullName);
@@ -259,16 +257,15 @@ function SettingsForms({ profile }: { profile: Profile }) {
         <h2 id="employees-heading">Employees</h2>
         <p>
           Active employees count toward Active Workers and can be picked for new
-          logs. Turning someone off keeps their past logs. Employees leave this
-          list when their last log is deleted.
+          logs. Turning someone off keeps their past logs.
         </p>
-        {employees.length === 0 ? (
+        {data.employees.length === 0 ? (
           <p className="settings-hint">
-            No employees with logs yet. Create a log from the dashboard.
+            No employees yet. Add one from the New Log form on the dashboard.
           </p>
         ) : (
           <ul className="employee-list">
-            {employees.map((employee) => (
+            {data.employees.map((employee) => (
               <li key={employee.id}>
                 <label>
                   <input
